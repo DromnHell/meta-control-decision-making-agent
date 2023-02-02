@@ -3,7 +3,7 @@
 
 '''
 With this script, the simulated agent use a Prioritized Sweeping algorithm (model-basedbehavior) 
-to learn the task and decide. It was developped by Jeanne Barthelemy during its intership.
+to learn to solve the task.. It was developped by Jeanne Barthelemy during its intership.
 '''
 
 __author__ = "Jeanne Barthelemy & Rémi Dromnelle"
@@ -19,7 +19,7 @@ VERSION = 1
 
 class ModelBased:
 	"""
-	This class implements a model-based learning algorithm (value-iteration).
+	This class implements a model-based learning algorithm (Prioritized Sweeping).
     """
 
 	def __init__(self, experiment, map_file, initial_variables, actions_space, boundaries_exp, parameters, options_log):

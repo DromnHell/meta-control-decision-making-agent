@@ -10,7 +10,7 @@ Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architect
 International Journal of Social Robotics, 1-27."
 
 With this script, the simulated agent use a Value-Iteration algorithm (model-basedbehavior) 
-to learn the task and decide.
+to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"

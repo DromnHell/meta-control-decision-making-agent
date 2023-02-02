@@ -37,7 +37,7 @@ def manage_arguments():
 	Manage the arguments of the script
 	"""
 	# -------------------------------------------------------------------------------
-	usage = "usage: main.py [options] [the id of the experiment] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the state and the action spaces] [the file that contains the parameters of each expert]"
+	usage = "usage: main.py [options] [the id of the experiment] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the state and the action spaces] [the file that contains the parameters of each expert]"
 	parser = OptionParser(usage)
 	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts", default = "random")
 	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time", default = 1.0)
