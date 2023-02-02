@@ -2,10 +2,17 @@
 #encoding: utf-8
 
 '''
+This script is part of the program to simulate a navigation experiment where a robot
+has to discover the rewarded state of the arena in which it evolves using a meta-control
+decision algorithm : "Dromnelle, R., Renaudo, E., Chetouani, M., Maragos, P., Chatila, R.,
+Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navigation and 
+Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
+International Journal of Social Robotics, 1-27."
+
 This script contains some functions used by the modelFree.py, the 
-modelBased.py and the metaController scripts. The names of the functions
+modelBased.py and the metaController.py scripts. The names of the functions
 are explicit : 
-set_* = edit the contents of dictionary
+set_* = edit the contents of a dictionary
 compute_* = do a computation on an element of a data structure and return the result
 get_* = collect a value in a data structure
 '''

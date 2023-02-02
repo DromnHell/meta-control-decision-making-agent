@@ -2,14 +2,15 @@
 #encoding: utf-8
 
 '''
-This script permits with the other ones in the folder to simulate an Erwan Renaudo's 
-experiment : 
-"Renaudo, E. (2016). Des comportements flexibles aux comportements habituels: 
-Meta-apprentissage neuro-inspiré pour la robotique autonome (Doctoral dissertation, 
-Université Pierre et Marie Curie (Paris 6))". 
+This script is part of the program to simulate a navigation experiment where a robot
+has to discover the rewarded state of the arena in which it evolves using a meta-control
+decision algorithm : "Dromnelle, R., Renaudo, E., Chetouani, M., Maragos, P., Chatila, R.,
+Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navigation and 
+Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
+International Journal of Social Robotics, 1-27."
 
-With this script, the simulated agent use a Value-Iteration algorithm (model-based 
-behavior) to learn the task.
+With this script, the simulated agent use a Value-Iteration algorithm (model-basedbehavior) 
+to learn the task and decide.
 '''
 
 __author__ = "Rémi Dromnelle"

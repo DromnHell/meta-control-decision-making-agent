@@ -1,0 +1,4 @@
+# State space
+state 38
+# Action space
+action 8

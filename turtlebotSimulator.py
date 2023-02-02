@@ -2,11 +2,14 @@
 #encoding: utf-8
 
 '''
-This script permits with the other in the folder ones to simulate an Erwan Renaudo's 
-experiment : 
-"Renaudo, E. (2016). Des comportements flexibles aux comportements habituels: 
-Meta-apprentissage neuro-inspiré pour la robotique autonome (Doctoral dissertation, 
-Université Pierre et Marie Curie (Paris 6))". 
+This script is part of the program to simulate a navigation experiment where a robot
+has to discover the rewarded state of the arena in which it evolves using a meta-control
+decision algorithm : "Dromnelle, R., Renaudo, E., Chetouani, M., Maragos, P., Chatila, R.,
+Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navigation and 
+Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
+International Journal of Social Robotics, 1-27."
+
+This script is the core of the program.
 '''
 
 __author__ = "Rémi Dromnelle"
@@ -34,7 +37,7 @@ def manage_arguments():
 	Manage the arguments of the script
 	"""
 	# -------------------------------------------------------------------------------
-	usage = "usage: main.py [options] [the number of experiment] [the file that contains model of transitions of the map] [the file that contains the list of key states] [the file that contains the parameters of each expert]"
+	usage = "usage: main.py [options] [the id of the experiment] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the state and the action spaces] [the file that contains the parameters of each expert]"
 	parser = OptionParser(usage)
 	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts", default = "random")
 	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time", default = 1.0)
@@ -48,15 +51,16 @@ def manage_arguments():
 	# -------------------------------------------------------------------------------
 	(options, args) = parser.parse_args()
 	# -------------------------------------------------------------------------------
-	if len(args) != 4:
+	if len(args) != 5:
 		parser.error("wrong number of arguments")
 	else:
 		experiment = sys.argv[1]
 		map_file = sys.argv[2]
 		key_states_file = sys.argv[3]
-		parameters_file = sys.argv[4]
+		spaces_file = sys.argv[4]
+		parameters_file = sys.argv[5]
 	# -------------------------------------------------------------------------------
-	return(experiment, map_file, key_states_file, parameters_file, options)
+	return(experiment, map_file, key_states_file, spaces_file, parameters_file, options)
 	# -------------------------------------------------------------------------------
 
 def parse_parameters(parameters_file):
@@ -86,7 +90,7 @@ def parse_parameters(parameters_file):
 
 if __name__ == "__main__":                          
 	# -------------------------------------------------------------------------------
-	experiment, map_file, key_states_file, parameters_file, options = manage_arguments()
+	experiment, map_file, key_states_file, spaces_file, parameters_file, options = manage_arguments()
 	parameters_MF, parameters_MB, parameters_DQN, beta_MC = parse_parameters(parameters_file)
 	# -------------------------------------------------------------------------------
 	# Initialise the environment of the agent
@@ -94,9 +98,8 @@ if __name__ == "__main__":
 	final_state = {"state": key_states["goal"], "reward": key_states["reward"]}
 	init_states = key_states["init_states"]
 	# -------------------------------------------------------------------------------
-	# Initialize parameters and variables for instances (idealy with a file)
-	action_space = 8
-	state_space = 38
+	# Initialize parameters and variables
+	state_space, action_space = load_spaces(spaces_file)
 	boundaries_exp = {"max_reward": options.max_reward, "duration": options.duration, "window_size": options.window_size, "epsilon": 0.01}
 	options_log = {"log": options.log, "summary": options.summary}
 	initial_variables = {"action_count": 0, "decided_action": 0, "actions_prob": 1/action_space, "previous_state": "0", "current_state": "0", \

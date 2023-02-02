@@ -2,14 +2,8 @@
 #encoding: utf-8
 
 '''
-This script permits with the other ones in the folder to simulate an Erwan Renaudo's 
-experiment : 
-"Renaudo, E. (2016). Des comportements flexibles aux comportements habituels: 
-Meta-apprentissage neuro-inspiré pour la robotique autonome (Doctoral dissertation, 
-Université Pierre et Marie Curie (Paris 6))". 
-
-With this script, the simulated agent use a priotized sweeping algorithm (model-based 
-behavior) to learn the task.
+With this script, the simulated agent use a Prioritized Sweeping algorithm (model-basedbehavior) 
+to learn the task and decide. It was developped by Jeanne Barthelemy during its intership.
 '''
 
 __author__ = "Jeanne Barthelemy & Rémi Dromnelle"
