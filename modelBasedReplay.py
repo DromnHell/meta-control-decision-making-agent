@@ -8,19 +8,17 @@ experiment :
 Meta-apprentissage neuro-inspiré pour la robotique autonome (Doctoral dissertation, 
 Université Pierre et Marie Curie (Paris 6))". 
 
-With this script, the simulated agent use a value-iteration algorithm (model-based 
+With this script, the simulated agent use a priotized sweeping algorithm (model-based 
 behavior) to learn the task.
 '''
 
-__author__ = "Rémi Dromnelle"
-__version__ = "1"
+__author__ = "Jeanne Barthelemy & Rémi Dromnelle"
+__version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
 
 from utility import *
-import numpy as np
-import sys
 
 VERSION = 1
 

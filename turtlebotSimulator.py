@@ -10,7 +10,7 @@ Université Pierre et Marie Curie (Paris 6))".
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "0.1"
+__version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -43,7 +43,7 @@ def manage_arguments():
 	parser.add_option("-w", "--window_size", action = "store", type = "int", dest = "window_size", help = "This option is the size of the window of transitions memorized by the agent.", default = 10)
 	parser.add_option("-n", "--new_goal", action = "store_true", dest = "change_goal", help = "This option says if the goal will change during the experiment", default = False)
 	parser.add_option("-a", "--add_wall", action = "store_true", dest = "add_wall", help = "This option says if a wall is added during the experiment", default = False)
-	parser.add_option("-l", "--log", action = "store_true", dest = "log", help =  "This option permit to no log the data.", default = False)
+	parser.add_option("-l", "--log", action = "store_true", dest = "log", help =  "This option permit to log the data.", default = False)
 	parser.add_option("-s", "--summary", action = "store_true", dest = "summary", help = "This option permit to make a summary of the data in one file to the grid search.", default = False)
 	# -------------------------------------------------------------------------------
 	(options, args) = parser.parse_args()
@@ -95,18 +95,18 @@ if __name__ == "__main__":
 	init_states = key_states["init_states"]
 	# -------------------------------------------------------------------------------
 	# Initialize parameters and variables for instances (idealy with a file)
-	boundaries_exp = {"max_reward": options.max_reward, "duration": options.duration, "window_size": options.window_size, "epsilon": 0.01}
-	options_log = {"log": options.log, "summary": options.summary}
-	initial_variables = {"action_count": 0, "decided_action": 0, "actions_prob": 0.125, "previous_state": "0", "current_state": "0", \
-	"qvalue": 1, "delta": 0.0, "plan_time": 0.0, "reward": 0}
 	action_space = 8
 	state_space = 38
+	boundaries_exp = {"max_reward": options.max_reward, "duration": options.duration, "window_size": options.window_size, "epsilon": 0.01}
+	options_log = {"log": options.log, "summary": options.summary}
+	initial_variables = {"action_count": 0, "decided_action": 0, "actions_prob": 1/action_space, "previous_state": "0", "current_state": "0", \
+	"qvalue": 1, "delta": 0.0, "plan_time": 0.0, "reward": 0}
 	criterion = options.criterion
 	coeff_kappa = options.coeff_kappa
 	# -------------------------------------------------------------------------------
 	# Create instances for the 3 systems used by the virtual agent
 	meta_controller_system = MetaController(experiment, map_file, initial_variables, boundaries_exp, beta_MC, criterion, coeff_kappa, options_log)
-	model_free_agent = ModelFree(experiment, map_file, initial_variables, boundaries_exp, parameters_MF, options_log)
+	model_free_agent = ModelFree(experiment, map_file, initial_variables, action_space, boundaries_exp, parameters_MF, options_log)
 	model_based_agent = ModelBased(experiment, map_file, initial_variables, action_space, boundaries_exp, parameters_MB, options_log)
 	#DQN_agent = DQN(experiment, map_file, initial_variables, action_space, state_space, boundaries_exp, parameters_DQN, options_log)
 	# -------------------------------------------------------------------------------
@@ -126,28 +126,26 @@ if __name__ == "__main__":
 	# -------------------------------------------------------------------------------
 	# Run the simulation 
 	while (action_count <= duration) and (cumulated_reward <= max_reward):
-		#if action_count == 4:
-			#break
 		print("\n")
 		print("------------------------------------------------------------")
-		print("It "+str(action_count))
-		print("Previous state : "+previous_state)
-		print("Action done : "+str(final_decision))
-		print("Current state : "+current_state)
-		print("Reward obtained : "+str(reward_obtained))
+		print(f"It {action_count}")
+		print(f"Previous state : {previous_state}")
+		print(f"Action done : {final_decision}")
+		print(f"Current state : {current_state}")
+		print(f"Reward obtained : {reward_obtained}")
 		# ---------------------------------------------------------------------------
 		# Update potentially the environment
 		if options.change_goal == True and action_count == after_switch_goal["it_switch"]:
 			final_state = {"state": after_switch_goal["new_goal"], "reward": after_switch_goal["reward"]}
 			map_file = map_file+"_afterSwitch"
-			print("The rewarded state has changed ! Now the state "+str(final_state["state"])+" gives the reward.")
+			print(f"The rewarded state has changed ! Now the state {final_state['state']} gives the reward.")
 		if options.add_wall == True and action_count == after_add_wall["it_add"]:
 			if path1 >= path2:
-				map_file = map_file+"_wall"+str(after_add_wall["path1"])
-				print("A wall has been added between the states "+str(str(after_add_wall["path1"])))
+				map_file = f"{map_file}_wall{after_add_wall['path1']}"
+				print(f"A wall has been added between the states {after_add_wall['path1']}")
 			else:
-				map_file = map_file+"_wall"+str(after_add_wall["path2"])
-				print("A wall has been added between the states "+str(str(after_add_wall["path2"])))
+				map_file = f"{map_file}_wall{after_add_wall['path2']}"
+				print(f"A wall has been added between the states {after_add_wall['path2']}")
 		# ---------------------------------------------------------------------------
 		# Get the probabilities of selection of the two expert for the current state accoring to the q-values
 		selection_prob_MF = model_free_agent.get_actions_prob(current_state)
@@ -186,7 +184,7 @@ if __name__ == "__main__":
 		elif winner == "DQN":
 			print("Winner expert : DQN")		
 			final_decision = decisions["DQN"]
-		print("Final action = "+str(final_decision))
+		print(f"Final action = {final_decision}")
 		# ---------------------------------------------------------------------------
 		# The previous state is now the old current state
 		previous_state = current_state 
@@ -208,9 +206,9 @@ if __name__ == "__main__":
 		cumulated_reward += reward_obtained
 		if reward_obtained == 1:
 			print("WIN !")
-			print("Cumulated reward = "+str(cumulated_reward-1)+" + "+"1 = "+str(cumulated_reward))
+			print(f"Cumulated reward = {cumulated_reward-1} + 1 = {cumulated_reward}")
 		else:
-			print("Cumulated reward = " + str(cumulated_reward))
+			print(f"Cumulated reward = {cumulated_reward}")
 		action_count += 1
 		# ---------------------------------------------------------------------------
 		# If no reward is obtained during the 200 first iteration, reset the run

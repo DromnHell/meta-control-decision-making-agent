@@ -15,7 +15,7 @@ robot. This script simulated the effect of the action's agent on the environment
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "3.0"
+__version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"

@@ -8,12 +8,12 @@ experiment :
 Meta-apprentissage neuro-inspiré pour la robotique autonome (Doctoral dissertation, 
 Université Pierre et Marie Curie (Paris 6))". 
 
-With this script, the simulated agent can choose betwen the decision proposed 
-by the model-based system or the decision proposed by the the model-free system.
+With this script, the simulated agent can coordinate different behavioral strategies.
+Compared to Erwan Renaudo's version, we propose new arbitration criteria.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1"
+__version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -86,9 +86,9 @@ class MetaController:
 		norm_probs_MB = [prob / sum(selection_prob["MB"]) for prob in selection_prob["MB"]]
 		# ---------------------------------------------------------------------------
 		entropy_probs_MF = shanon_entropy(norm_probs_MF)
-		print("Entropy MF :"+str(entropy_probs_MF))
+		print(f"Entropy MF : {entropy_probs_MF}")
 		entropy_probs_MB = shanon_entropy(norm_probs_MB)
-		print("Entropy MB :"+str(entropy_probs_MB))
+		print(f"Entropy MB : {entropy_probs_MB}")
 		# ---------------------------------------------------------------------------
 		max_entropy = shanon_entropy([1/(len(norm_probs_MF))]*len(norm_probs_MF))
 		highest_entropy = max(entropy_probs_MF,entropy_probs_MB)
@@ -97,8 +97,8 @@ class MetaController:
 		norm_entropy_MF = entropy_probs_MF / max_entropy
 		norm_entropy_MB = entropy_probs_MB / max_entropy
 		self.norm_entropy = {"MF": norm_entropy_MF, "MB": norm_entropy_MB}
-		print("Norm entropy MF: "+str(norm_entropy_MF))
-		print("Norm entropy MB: "+str(norm_entropy_MB))
+		print(f"Norm entropy MF : {norm_entropy_MF}")
+		print(f"Norm entropy MB : {norm_entropy_MB}")
 		# ---------------------------------------------------------------------------
 		max_duration = max(duration["MF"],duration["MB"])
 		if max_duration == 0.0:
@@ -107,12 +107,12 @@ class MetaController:
 		norm_duration_MB = (duration["MB"]) / max_duration
 		# ---------------------------------------------------------------------------
 		coeff  = math.exp(-entropy_probs_MF * self.coeff_kappa)
-		print("Coeff = exp(-"+str(entropy_probs_MF)+" * "+str(self.coeff_kappa)+") = "+str(coeff))
+		print(f"Coeff : exp(-{entropy_probs_MF} * {self.coeff_kappa}) = {coeff}")
 		# ---------------------------------------------------------------------------
 		qval_MF = - (norm_entropy_MF + coeff * norm_duration_MF)
-		print("Qval MF : - ("+str(norm_entropy_MF)+" + "+str(coeff)+" * "+str(norm_duration_MF)+")) = "+str(qval_MF))
+		print(f"Qval MF : - ({norm_entropy_MF} + {coeff} * {norm_duration_MF}) = {qval_MF}")
 		qval_MB = - (norm_entropy_MB + coeff * norm_duration_MB)
-		print("Qval MB : - ("+str(norm_entropy_MB)+" + "+str(coeff)+" * "+str(norm_duration_MB)+")) = "+str(qval_MB))
+		print(f"Qval MB : - ({norm_entropy_MB} + {coeff} * {norm_duration_MB}) = {qval_MB}")
 		qvalues = {"MF": qval_MF, "MB": qval_MB}
 		# ---------------------------------------------------------------------------
 		# Soft-max function
@@ -150,9 +150,9 @@ class MetaController:
 		norm_probs_MB = [prob / sum(selection_prob["MB"]) for prob in selection_prob["MB"]]
 		# ---------------------------------------------------------------------------
 		entropy_probs_MF = shanon_entropy(norm_probs_MF)
-		print("Entropy MF :"+str(entropy_probs_MF))
+		print(f"Entropy MF : {entropy_probs_MF}")
 		entropy_probs_MB = shanon_entropy(norm_probs_MB)
-		print("Entropy MB :"+str(entropy_probs_MB))
+		print(f"Entropy MB : {entropy_probs_MB}")
 		# ---------------------------------------------------------------------------
 		max_entropy = shanon_entropy([1/(len(norm_probs_MF))]*len(norm_probs_MF))
 		highest_entropy = max(entropy_probs_MF,entropy_probs_MB)
@@ -161,13 +161,13 @@ class MetaController:
 		norm_entropy_MF = entropy_probs_MF / max_entropy
 		norm_entropy_MB = entropy_probs_MB / max_entropy
 		self.norm_entropy = {"MF": norm_entropy_MF, "MB": norm_entropy_MB}
-		print("Norm entropy MF: "+str(norm_entropy_MF))
-		print("Norm entropy MB: "+str(norm_entropy_MB))
+		print(f"Norm entropy MF : {norm_entropy_MF}")
+		print(f"Norm entropy MB : {norm_entropy_MB}")
 		# ---------------------------------------------------------------------------
 		qval_MF = - (norm_entropy_MF)
-		print("Qval MF : - "+str(norm_entropy_MF)+") = "+str(qval_MF))
+		print(f"Qval MF : - {norm_entropy_MF}) = {qval_MF}")
 		qval_MB = - (norm_entropy_MB)
-		print("Qval MB : - "+str(norm_entropy_MB)+") = "+str(qval_MB))
+		print(f"Qval MB : - {norm_entropy_MB}) = {qval_MB}")
 		qvalues = {"MF": qval_MF, "MB": qval_MB}
 		# ---------------------------------------------------------------------------
 		# Soft-max function
@@ -225,7 +225,7 @@ class MetaController:
 		Choose the action between those proposed randomly
 		"""
 		# ---------------------------------------------------------------------------
-		#print("Decisions :"+str(decisions))
+		#print(f"Decisions : {decisions}")
 		randval = np.random.rand()
 		if randval <= 0.500000000:
 			who_plan = {"MF": True, "MB": False, "DQN": False}
@@ -272,9 +272,9 @@ class MetaController:
 		old_time = datetime.datetime.now()
 		# ---------------------------------------------------------------------------
 		print("------------------------ MC --------------------------------") 
-		print("Plan time : "+str(plan_time))
-		print("Probability of actions : "+str(selection_prob))
-		#print("Repartition of the prefered actions : "+str(prefered_action))
+		print(f"Plan time : {plan_time}")
+		print(f"Probability of actions : {selection_prob}")
+		#print(f"Repartition of the prefered actions : {prefered_action}")
 		# ---------------------------------------------------------------------------
 		# Decide betwen the two experts accoring to the choosen criterion
 		final_actions_prob, who_plan = self.decide(plan_time, selection_prob)
@@ -286,26 +286,31 @@ class MetaController:
 		filtered_time = low_pass_filter(0.6, old_plan_time, new_plan_time)
 		set_duration(self.dict_duration, current_state, filtered_time)
 		# ---------------------------------------------------------------------------
+		# Register the winner
+		if who_plan["MF"] == True:
+			winner = "MF"
+		elif who_plan["MB"] == True:
+			winner = "MB"
+		elif who_plan["DQN"] == True:
+			winner = "DQN"
+		# ---------------------------------------------------------------------------
 		# Logs
 		if self.log == True:
 			# -----------------------------------------------------------------------
 			time = 0.0
-			if who_plan["MB"] == True:
-				time += plan_time["MB"]
 			if who_plan["MF"] == True:
 				time += plan_time["MF"]
+			if who_plan["MB"] == True:
+				time += plan_time["MB"]
 			if who_plan["DQN"] == True:
 				time += plan_time["DQN"]
 			# -----------------------------------------------------------------------
 			if who_plan["MF"] == True:
-				self.MC_log.write(str(action_count)+" "+str(current_state)+" "+str(reward_obtained)+" "+str(time)+" MF "+str(final_actions_prob["MF"])+" "+str(self.norm_entropy["MF"])+" "+str(self.norm_entropy["MB"])+" "+str(filtered_time)+"\n")
-				winner = "MF"
+				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} MF {final_actions_prob['MF']} {self.norm_entropy['MF']} {self.norm_entropy['MB']} {filtered_time}\n")
 			elif who_plan["MB"] == True:
-				self.MC_log.write(str(action_count)+" "+str(current_state)+" "+str(reward_obtained)+" "+str(time)+" MB "+str(final_actions_prob["MB"])+" "+str(self.norm_entropy["MF"])+" "+str(self.norm_entropy["MB"])+" "+str(filtered_time)+"\n")
-				winner = "MB"
+				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} MB {final_actions_prob['MB']} {self.norm_entropy['MF']} {self.norm_entropy['MB']} {filtered_time}\n")
 			elif who_plan["DQN"] == True:
-				self.MC_log.write(str(action_count)+" "+str(current_state)+" "+str(reward_obtained)+" "+str(time)+" DQN "+str(final_actions_prob["DQN"])+" "+str(self.norm_entropy["DQN"])+" "+str(self.norm_entropy["DQN"])+" "+str(filtered_time)+"\n")
-				winner = "DQN"
+				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} DQN {final_actions_prob['DQN']} {self.norm_entropy['DQN']} {self.norm_entropy['DQN']} {filtered_time}\n")
 		# ---------------------------------------------------------------------------
 		return winner, who_plan
 		# ---------------------------------------------------------------------------

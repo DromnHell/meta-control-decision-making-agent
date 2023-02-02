@@ -88,7 +88,7 @@ def rargmax(vector):
 
 # ---------------------------------------------------------------------------
 def softmax_actions_prob(qvalues, beta):
-	print("Qvalues : "+str(qvalues))
+	print(f"Qvalues : {qvalues}")
 	actions_prob = dict()
 	sum_probs = 0
 	# -----------------------------------------------------------------------
@@ -101,10 +101,9 @@ def softmax_actions_prob(qvalues, beta):
 	for key, value in qvalues.items():
 		actions_prob[str(key)] = actions_prob[str(key)]/sum_probs
 	# -----------------------------------------------------------------------
-	print("Prob actions : "+str(actions_prob))
+	print(f"Prob actions : {actions_prob}")
 	return actions_prob
 # ---------------------------------------------------------------------------
-
 
 # ---------------------------------------------------------------------------
 def softmax_decision(actions_prob, actions):

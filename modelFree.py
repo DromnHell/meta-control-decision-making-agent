@@ -8,12 +8,14 @@ experiment :
 Meta-apprentissage neuro-inspiré pour la robotique autonome (Doctoral dissertation, 
 Université Pierre et Marie Curie (Paris 6))". 
 
-With this script, the simulated agent use a q-learning algorithm (model-free behavior) 
+With this script, the simulated agent use a Q-learning algorithm (model-free behavior) 
 to learn the task.
+
+Compared to Erwan Renaudo's version, we use here a tabular version of Q-learning
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1"
+__version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -28,7 +30,7 @@ class ModelFree:
 	This class implements a model-free learning algorithm (q-learning).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, boundaries_exp, parameters, options_log):
+	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, options_log):
 		"""
 		Iinitialise values and models
 		"""
@@ -51,6 +53,7 @@ class ModelFree:
 		init_reward = initial_variables["reward"]
 		init_delta = initial_variables["delta"]
 		init_plan_time = initial_variables["plan_time"]
+		self.action_space = action_space
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
 		# ---------------------------------------------------------------------------
@@ -78,66 +81,17 @@ class ModelFree:
 			s = str(state["state"])
 			t = state["transitions"]
 			# -----------------------------------------------------------------------
-			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*8
+			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*self.action_space
 			self.dict_qvalues[(s,"visits")] = 0
 			# -----------------------------------------------------------------------
 			# - initialise the "probabilties of actions" dict
-			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*8, "filtered_prob": [init_actions_prob]*8})
+			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*self.action_space, "filtered_prob": [init_actions_prob]*self.action_space})
 			# -----------------------------------------------------------------------
 			# - initialise the "identity of the selected action" dict
-			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*6,[0]*6,[0]*6,[0]*6,[0]*6,[0]*6,[0]*6,[0]*6]})
+			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*self.window_size]*self.action_space})
 			# -----------------------------------------------------------------------
 			# - initialise the duration dict
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
-		# ---------------------------------------------------------------------------
-		# Initialise logs
-		# self.directory_flag = False
-		# if not os.path.exists("logs"):
-		# 	os.mkdir("logs") 
-		# os.chdir("logs")
-		# if not os.path.exists("MF"):
-		# 	os.mkdir("MF") 
-		# os.chdir("MF")
-		# if self.log == True:
-		# 	directory = "exp"+str(self.experiment)+"_alpha"+str(self.alpha)+"_gamma"+str(self.gamma)+"_beta"+str(self.beta)
-		# 	if not os.path.exists(directory):
-		# 		os.makedirs(directory)
-		# 	os.chdir(directory)
-		# 	self.directory_flag = True
-		# 	# -----------------------------------------------------------------------
-		# 	prefixe = "v"+str(VERSION)+"_TBMF_exp"+str(self.experiment)+"_"
-		# 	# -----------------------------------------------------------------------
-		# 	self.reward_log = open(prefixe+'reward_log.dat', 'w')
-		# 	self.reward_log.write("timecount"+" "+str(action_count)+" "+str(init_reward)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	# -----------------------------------------------------------------------
-		# 	self.states_evolution_log = open(prefixe+'statesEvolution_log.dat', 'w')
-		# 	self.states_evolution_log.write("timecount"+" "+str(action_count)+" "+current_state+" "+previous_state+ \
-		# 		" currentContactState"+" currentViewState"+" "+str(decided_action)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	# -----------------------------------------------------------------------
-		# 	#self.qvalues_evolution_log = open(prefixe+'qvaluesEvolution_log.dat', 'w')
-		# 	#self.qvalues_evolution_log.write('{\n"logs" :\n['+json.dumps(self.dict_qvalues))
-		# 	# -----------------------------------------------------------------------
-		# 	self.actions_evolution_log = open(prefixe+'actions_evolution_log.dat', 'w')
-		# 	self.actions_evolution_log.write('{\n"logs" :\n['+json.dumps(self.dict_actions_prob))
-		# 	# -----------------------------------------------------------------------
-		# 	self.monitoring_values_log = open(prefixe+'monitoring_values_log.dat', 'w')
-		# 	self.monitoring_values_log.write(str(action_count)+" "+str(init_plan_time)+" "+str(abs(init_delta))+" "+str(init_delta)+" "+str(init_delta)+"\n")
-		# # ---------------------------------------------------------------------------
-		# os.chdir("../../../")
-		# ---------------------------------------------------------------------------
-
-
-	def __del__(self):
-		"""
-		Close all log files
-		"""
-		# ---------------------------------------------------------------------------
-		# if self.log == True:
-		# 	self.reward_log.close()
-		# 	#self.qvalues_evolution_log.close()
-		# 	self.actions_evolution_log.close()
-		# 	self.states_evolution_log.close()
-		# 	self.monitoring_values_log.close()
 		# ---------------------------------------------------------------------------
 
 
@@ -257,7 +211,7 @@ class ModelFree:
 		# -------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
-		prefered_action = [0]*8
+		prefered_action = [0]*self.action_space
 		for action in range(0,len(prefered_action)):
 			for dictStateValues in self.dict_decision["values"]:
 				if dictStateValues["state"] == current_state:
@@ -270,24 +224,10 @@ class ModelFree:
 		if reward_obtained > 0.0:
 			self.not_learn = True
 			for a in range(0,8):
-				self.dict_qvalues[(current_state,"qvals")] = [0.0]*8
+				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
 		else:
 			self.not_learn = False
-		# ---------------------------------------------------------------------------
-		# Logs
-		# if self.log == True:
-		# 	self.reward_log.write("timecount"+" "+str(action_count)+" "+str(reward_obtained)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	self.states_evolution_log.write("timecount"+" "+str(action_count)+" "+current_state+" "+previous_state+ \
-		# 		" currentContactState"+" currentViewState"+" "+str(decided_action)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	#self.qvalues_evolution_log.write(",\n"+json.dumps(self.dict_qvalues))
-		# 	self.actions_evolution_log.write(",\n"+json.dumps(self.dict_actions_prob))
-		# 	self.monitoring_values_log.write(str(action_count)+" "+str(decided_action)+" "+str(plan_time)+" "+str(selection_prob)+" "+str(prefered_action)+"\n")
-		# ---------------------------------------------------------------------------
-		# Finish the logging at the end of the simulation (duration or max reward)
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
-			#if self.log == True:
-			#	self.qvalues_evolution_log.write('],\n"name" : "Qvalues"\n}')
-			#	self.actions_evolution_log.write('],\n"name" : "Actions"\n}')
 			# -----------------------------------------------------------------------
 			# Build the summary file 
 			if self.summary == True:
@@ -296,7 +236,7 @@ class ModelFree:
 				# -------------------------------------------------------------------
 				prefixe = 'v%d_TBMF_'%(VERSION)
 				self.summary_log = open(prefixe+'summary_log.dat', 'a')
-				self.summary_log.write(str(self.alpha)+" "+str(self.gamma)+" "+str(self.beta)+" "+str(cumulated_reward)+"\n")
+				self.summary_log.write(f"{self.alpha} {self.gamma} {self.beta} {cumulated_reward}\n")
 		# ---------------------------------------------------------------------------
 		#print("Qvalues : ")
 		#for action in range(0,8):
