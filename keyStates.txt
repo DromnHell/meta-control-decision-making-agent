@@ -1,6 +1,6 @@
 # The states where the agent start the experiment and come back after obtains the reward
 init 0 32
-# The state which gives reward / the value of its reward
+# The state which gives reward / the value of the reward
 goal 18 1
 # The iteration when the rewarded state changes / the number of the state / the value of its reward
 new_goal 1601 34 1
