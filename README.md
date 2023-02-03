@@ -18,15 +18,15 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   5.  the file that contains the parameters of the agent.
   
   In addition, it can also take 9 optional arguments :
-  * the coordination criterion we want to use,
-  * the value of the kappa coefficient,
-  * the amount of reward expected before the simulation stops,
-  * the maximum duration of the simulation,
-  * the window size of the filtering,
-  * the indication of an upcoming goal change for the agent,
-  * the indication of an upcoming environmental change,
-  * the record of the data,
-  * the record of a compressed version of the data.
+  * the coordination criterion we want to use (-c),
+  * the value of the kappa coefficient (-k),
+  * the amount of reward expected before the simulation stops (-r),
+  * the maximum duration of the simulation (-d),
+  * the window size of the filtering (-w),
+  * the indication of an upcoming goal change for the agent (-n),
+  * the indication of an upcoming environmental change (-a),
+  * the record of the data (-l),
+  * the record of a compressed version of the data (-s).
   
 * The *modelFree.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task,
