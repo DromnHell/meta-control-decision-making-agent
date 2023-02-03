@@ -37,7 +37,7 @@ def manage_arguments():
 	Manage the arguments of the script
 	"""
 	# -------------------------------------------------------------------------------
-	usage = "usage: main.py [options] [the id of the experiment] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the state and the action spaces] [the file that contains the parameters of each expert]"
+	usage = "usage: main.py [options] [the id of the experiment] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
 	parser = OptionParser(usage)
 	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts", default = "random")
 	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time", default = 1.0)
@@ -154,8 +154,7 @@ if __name__ == "__main__":
 		selection_prob_MF = model_free_agent.get_actions_prob(current_state)
 		selection_prob_MB = model_based_agent.get_actions_prob(current_state)
 		#selection_prob_DQN = DQN_agent.get_actions_prob(current_state)
-		selection_prob_DQN = [0.143]*action_space
-		selection_prob = {"MF": selection_prob_MF, "MB": selection_prob_MB, "DQN": selection_prob_DQN}
+		selection_prob = {"MF": selection_prob_MF, "MB": selection_prob_MB, "DQN": [1/action_space]*action_space}
 		# Get the the of planification of the two expert for the current state according to the previous one
 		plan_time_MF = model_free_agent.get_plan_time(current_state)
 		plan_time_MB = model_based_agent.get_plan_time(current_state)
