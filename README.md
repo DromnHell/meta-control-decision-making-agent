@@ -6,7 +6,7 @@ This program has been developed during my thesis: ["Dromnelle, R. (2021). Archit
 
 The main objective of my thesis was to create a meta-control algorithm that allows an agent to coordinate several online behavior strategies based on reinforcement learning. This program allowed me to quickly evaluate several coordination criteria in simulation before performing experiments in the real environment with a real robot. 
 
-## Scripts to simulate the agent
+## Scripts to simulate the agent in its environment
 
 * The agentSimulator.py script is the core of the program.
 
