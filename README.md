@@ -47,7 +47,7 @@ reinforcement learning) to learn to solve the task,
 * The *realisticNavWorld_wall6-7.json* file is identical to the realisticNavWorld.json file, with the addition of a wall between the states 6 and 7,
 * The *realisticNavWorld_afterSwitch.json* file is identical to the realisticNavWorld.json file, with a change in the location of the reward, from the state 18 to the state 34,
 * The *keyStates.txt* file contains the id of the rewarded states and the initial states,
-* The *spaces.txt* file contains the action space and the states space,
+* The *spaces.txt* file contains the actions space and the states space,
 * The *parameters.txt* file contains the parameters of the agent.
  
 ## Dependencies
