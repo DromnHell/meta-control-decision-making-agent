@@ -28,15 +28,15 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   * the record of the data (-l),
   * the record of a compressed version of the data (-s).
   
-* The *modelFree.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
+* The *modelFreeSystem.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task,
-* The *modelBased.py* script allows the agent to use a Value-Iteration algorithm (model-based learning
+* The *modelBasedSystem.py* script allows the agent to use a Value-Iteration algorithm (model-based learning
 by planification) to learn to solve the task,
-* The *DQN.py* script allows the agent to use a Deep Q-Network algorithm (deep reinforcement learning) 
+* The *DQNSystem.py* script allows the agent to use a Deep Q-Network algorithm (deep reinforcement learning) 
 to learn to solve the task,
-* The *modelBasedReplay.py* script allows the agent to use a Prioritized Sweeping algorithm (model-based
+* The *prioritizedSweepingSystem.py* script allows the agent to use a Prioritized Sweeping algorithm (model-based
 reinforcement learning) to learn to solve the task,
-* The *metaController.py* script allows the agent to coordinate the different behavioral strategies implemented in the other scripts,
+* The *metaControllerSystem.py* script allows the agent to coordinate the different behavioral strategies implemented in the other scripts,
 * The *manageEnvironment.py* script allows to set up the environment and simulate the actions of the agent on it,
 * The *utility.py* script contains some functions used by the other scripts.
 
