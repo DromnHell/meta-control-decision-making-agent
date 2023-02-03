@@ -29,7 +29,7 @@ class ModelFree:
 	This class implements a model-free learning algorithm (q-learning).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, options_log):
+	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
 		"""
 		Iinitialise values and models
 		"""
@@ -42,8 +42,8 @@ class ModelFree:
 		self.alpha = parameters["alpha"]
 		self.gamma = parameters["gamma"]
 		self.beta = parameters["beta"]
-		self.log = options_log["log"]
-		self.summary = options_log["summary"]
+		self.log = log["log"]
+		self.summary = log["summary"]
 		action_count = initial_variables["action_count"]
 		decided_action = initial_variables["decided_action"]
 		previous_state = initial_variables["previous_state"]

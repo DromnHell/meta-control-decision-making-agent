@@ -7,6 +7,8 @@ to learn to solve the task.. It was developped by Jeanne Barthelemy during its i
 
 With this script, the simulated agent use a Prioritized Sweeping algorithm (model-based
 reinforcement learning) to learn to solve the task.
+
+Warning : Not connected to agentSimulator.py for the moment
 '''
 
 __author__ = "Jeanne Barthelemy & Rémi Dromnelle"
@@ -25,13 +27,13 @@ class ModelBased:
 	This class implements a model-based learning algorithm (Prioritized Sweeping).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, actions_space, boundaries_exp, parameters, options_log):
+	def __init__(self, experiment, map_file, initial_variables, actions_space, boundaries_exp, parameters, log):
 		"""
 		Iinitialise values and models
 		"""
 		# -----------------------------------------------------------------------------
 		# Initialise all the variables which will be used
-		self.print = options_log["print"]
+		self.print = log["print"]
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
@@ -40,9 +42,9 @@ class ModelBased:
 		self.alpha = parameters["alpha"]
 		self.gamma = parameters["gamma"]
 		self.beta = parameters["beta"]
-		#self.log = False #options_log["log"]
-		self.logNumber = options_log["logNumber"]
-		self.summary = options_log["summary"]
+		#self.log = False #log["log"]
+		self.logNumber = log["logNumber"]
+		self.summary = log["summary"]
 		action_count = initial_variables["action_count"]
 		decided_action = initial_variables["decided_action"]
 		previous_state = initial_variables["previous_state"]
@@ -99,10 +101,10 @@ class ModelBased:
 		#Create a buffer and for the replays
 		self.bufferRPE=np.empty((4,0), str) #current_state action RPE abs(RPE) 
 		#Initialisation of variables for the replays
-		self.replaythreshold=options_log["thresholdMB"]
-		self.replaywindow=options_log["PS_windows"]
-		self.replay_budget=options_log["PS_budget"]
-		self.replayMB=options_log["replayMB"]
+		self.replaythreshold=log["thresholdMB"]
+		self.replaywindow=log["PS_windows"]
+		self.replay_budget=log["PS_budget"]
+		self.replayMB=log["replayMB"]
 
 
 

@@ -38,19 +38,19 @@ def initialize_environment(key_states_file):
 				goal = str(line.split(" ")[1])
 				win_reward = int(line.split(" ")[2])
 			elif line.split(" ")[0] == "new_goal":
-				switch_goal = int(line.split(" ")[1])
+				iteration_switch = int(line.split(" ")[1])
 				new_goal = str(line.split(" ")[2])
 				win_reward = int(line.split(" ")[3])
 			elif line.split(" ")[0] == "new_wall":
-				add_wall = int(line.split(" ")[1])
+				iteration_add = int(line.split(" ")[1])
 				path1 = str(line.split(" ")[2])
 				path2 = str(line.split(" ")[3])
 	# -------------------------------------------------------------------------------
 	key_states = {"init_states": init_str, "goal": goal, "reward": win_reward}
-	after_switch_goal = {"it_switch": switch_goal, "new_goal": new_goal, "reward": win_reward}
-	after_add_wall = {"it_add": add_wall, "path1": path1, "path2": path2}
+	switch_goal = {"iteration": iteration_switch, "new_goal": new_goal, "reward": win_reward}
+	add_wall = {"iteration": iteration_add, "path1": path1, "path2": path2}
 	# -------------------------------------------------------------------------------
-	return key_states, after_switch_goal, after_add_wall
+	return key_states, switch_goal, add_wall
 	# -------------------------------------------------------------------------------
 
 
@@ -65,11 +65,11 @@ def load_spaces(spaces_file):
 	with open(spaces_file,'r') as file1:
 		for line in file1:
 			if line.split(" ")[0] == "state":
-				state_space = int(line.split(" ")[1])
+				states_space = int(line.split(" ")[1])
 			elif line.split(" ")[0] == "action":
-				action_space = int(line.split(" ")[1])
+				actions_space = int(line.split(" ")[1])
 	# -------------------------------------------------------------------------------
-	return state_space, action_space
+	return {"states": states_space, "actions": actions_space}
 	# -------------------------------------------------------------------------------
 
 
