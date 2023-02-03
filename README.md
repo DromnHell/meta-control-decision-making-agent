@@ -1,4 +1,4 @@
-# Experiments in meta-control decision-making
+# Meta-control decision-making experiment
 
 ## Overview 
 
