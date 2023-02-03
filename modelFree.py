@@ -9,7 +9,7 @@ Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navi
 Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
 International Journal of Social Robotics, 1-27."
 
-With this script, the simulated agent use a Q-learning algorithm (model-free behavior) 
+With this script, the simulated agent use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task.
 '''
 

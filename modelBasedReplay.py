@@ -4,6 +4,9 @@
 '''
 With this script, the simulated agent use a Prioritized Sweeping algorithm (model-basedbehavior) 
 to learn to solve the task.. It was developped by Jeanne Barthelemy during its intership.
+
+With this script, the simulated agent use a Prioritized Sweeping algorithm (model-based
+reinforcement learning) to learn to solve the task.
 '''
 
 __author__ = "Jeanne Barthelemy & Rémi Dromnelle"

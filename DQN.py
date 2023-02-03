@@ -9,8 +9,8 @@ Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navi
 Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
 International Journal of Social Robotics, 1-27."
 
-With this script, the simulated agent use DQN algorithm (model-free behavior) 
-to learn the task and decide.
+With this script, the simulated agent use a Deep Q-Network algorithm (deep reinforcement learning) 
+to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"
