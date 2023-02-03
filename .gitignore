@@ -4,6 +4,5 @@ logs/*
 # Ignore pycache
 __pycache__/*
 
-
 # Ignore Miniconda script
 Miniconda3-latest-MacOSX-x86_64.sh
