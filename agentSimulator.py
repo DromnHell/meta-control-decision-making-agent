@@ -25,9 +25,9 @@ from optparse import OptionParser
 import re
 import sys
 from metaControllerSystem import *
-from modelFreeSystem import *
-from modelBasedSystem import *
-from DQNSystem import *
+from modelFreeRL import *
+from modelBasedRL import *
+from DQN import *
 from manageEnvironment import *
 # -----------------------------------------------------------------------------------
 

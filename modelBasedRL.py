@@ -9,8 +9,8 @@ Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navi
 Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
 International Journal of Social Robotics, 1-27."
 
-With this script, the simulated agent use a Value-Iteration algorithm (model-based learning
-by planification) to learn to solve the task.
+With this script, the simulated agent use a Value-Iteration algorithm (model-based reinforcement
+learning) to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"
