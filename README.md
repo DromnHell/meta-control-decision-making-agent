@@ -35,7 +35,7 @@ to learn to solve the task,
 to learn to solve the task,
 * The *prioritizedSweeping.py* script allows the agent to use a Prioritized Sweeping algorithm (model-based
 reinforcement learning) to learn to solve the task,
-* The *metaControllerSystem.py* script allows the agent to coordinate the different behavioral strategies implemented in the other scripts,
+* The *metaControllerSystem.py* script allows the agent to coordinate the different behavioral strategies implemented in the four previous scripts,
 * The *manageEnvironment.py* script allows to set up the environment and simulate the actions of the agent on it,
 * The *utility.py* script contains some functions used by the other scripts.
 
