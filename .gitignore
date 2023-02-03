@@ -1,10 +1,9 @@
 # Ignore logs
-/logs
+./logs/*
 
 # Ignore pycache
-__pycache__/
-*.py[cod]
+./__pycache__/*
 
 
 # Ignore Miniconda script
-Miniconda3-latest-MacOSX-x86_64.sh
+./Miniconda3-latest-MacOSX-x86_64.sh
