@@ -9,7 +9,7 @@ Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navi
 Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
 International Journal of Social Robotics, 1-27."
 
-This script is the core of the program.
+This script is the core of the program. It initializes the agent and run the simulation.
 '''
 
 __author__ = "Rémi Dromnelle"
@@ -31,7 +31,7 @@ from DQN import *
 from manageEnvironment import *
 # -----------------------------------------------------------------------------------
 
-def run_simulation(map_file, model_free_agent, model_based_agent, meta_controller, spaces, boundaries_exp, changes_exp, initial_variables):
+def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables):
 	"""
 	Run the simulation
 	"""
@@ -49,7 +49,17 @@ def run_simulation(map_file, model_free_agent, model_based_agent, meta_controlle
 	reward_obtained = initial_variables["reward"]
 	duration = boundaries_exp["duration"]
 	max_reward = boundaries_exp["max_reward"]
-	who_plan = {current_state: {"MF": True, "MB": True, "DQN": True}}
+	# -------------------------------------------------------------------------------
+	# Get the ID of the experts and initialize who_plan dictionnary 
+	experts_id = list()
+	who_plan = {current_state : {}}
+	for expert in experts_to_run:
+		if expert != None:
+			experts_id.append(expert.ID)
+			who_plan[current_state][expert.ID] = True
+		else:
+			experts_id.append(None)
+			who_plan[current_state][None] = None
 	# -------------------------------------------------------------------------------
 	cumulated_reward = 0
 	path1 = 0
@@ -78,42 +88,42 @@ def run_simulation(map_file, model_free_agent, model_based_agent, meta_controlle
 				map_file = f"{map_file}_wall{add_wall['path2']}"
 				print(f"A wall has been added between the states {add_wall['path2']}")
 		# ---------------------------------------------------------------------------
-		# Get the probabilities of selection of the two expert for the current state accoring to the q-values
-		selection_prob_MF = model_free_agent.get_actions_prob(current_state)
-		selection_prob_MB = model_based_agent.get_actions_prob(current_state)
-		#selection_prob_DQN = DQN_agent.get_actions_prob(current_state)
-		selection_prob = {"MF": selection_prob_MF, "MB": selection_prob_MB, "DQN": [1/spaces["actions"]]*spaces["actions"]}
-		# Get the the of planification of the two expert for the current state according to the previous one
-		plan_time_MF = model_free_agent.get_plan_time(current_state)
-		plan_time_MB = model_based_agent.get_plan_time(current_state)
-		#plan_time_DQN = DQN_agent.get_plan_time(current_state)
-		plan_time = {"MF": plan_time_MF, "MB": plan_time_MB, "DQN": 0.0000000}
+		# Get the probabilities of selection of the experts for the current state accoring to the q-values
+		selection_prob = list()
+		for expert in experts_to_run:
+			if expert != None:
+				selection_prob.append(expert.get_actions_prob(current_state))
+			else:
+				selection_prob.append(None)
+		# Get the the of planification of the experts for the current state according to the previous one
+		plan_time = list()
+		for expert in experts_to_run:
+			if expert != None:
+				plan_time.append(expert.get_plan_time(current_state))
+			else:
+				plan_time.append(None)
+		# ---------------------------------------------------------------------------
 		# Choose which expert to inhibit with the MC using a criterion of coordination
 		first_visit = False
 		if current_state not in who_plan.keys():
 			first_visit = True
-		winner, who_plan[current_state] = meta_controller.run(action_count, reward_obtained, current_state, plan_time, selection_prob)
+		winner, who_plan[current_state] = meta_controller.run(action_count, reward_obtained, current_state, experts_id, plan_time, selection_prob)
 		if first_visit == True:
-			who_plan[current_state] = {"MF": True, "MB": True, "DQN": True}
+			who_plan[current_state] = {experts_id[0]: True, experts_id[1]: True}
 		# ---------------------------------------------------------------------------
 		# Get the decision, the deltaQ and the planning time of each expert
-		decision_MF = model_free_agent.run(action_count, cumulated_reward, reward_obtained, previous_state, final_decision, current_state, who_plan[current_state]["MF"])
-		decision_MB = model_based_agent.run(action_count, cumulated_reward, reward_obtained, previous_state, final_decision, current_state, who_plan[current_state]["MB"])
-		#decision_DQN = DQN_agent.run(action_count, cumulated_reward, reward_obtained, previous_state, final_decision, current_state, who_plan[current_state]["DQN"])
-		decision_DQN = 0
-		decisions = {"MF": decision_MF, "MB": decision_MB, "DQN": decision_DQN}
+		decisions = list()
+		for expert in experts_to_run:
+			if expert != None:
+				decisions.append(expert.run(action_count, cumulated_reward, reward_obtained, previous_state, final_decision, current_state, who_plan[current_state][expert.ID]))
+			else:
+				decisions.append(None)
 		print("-------------------------------------------------------------")
 		# ---------------------------------------------------------------------------
-		if winner == "MF":
-			print("Winner expert : Hab")
-			final_decision = decisions["MF"]
-		elif winner == "MB":
-			print("Winner expert : GD")		
-			final_decision = decisions["MB"]
-		elif winner == "DQN":
-			print("Winner expert : DQN")		
-			final_decision = decisions["DQN"]
-		print(f"Final action = {final_decision}")
+		for it, expert in enumerate(experts_id):
+			if expert == winner:
+				print(f"Winner expert : {expert}")
+				final_decision = decisions[it]
 		# ---------------------------------------------------------------------------
 		# The previous state is now the old current state
 		previous_state = current_state 
@@ -147,9 +157,8 @@ def run_simulation(map_file, model_free_agent, model_based_agent, meta_controlle
 		#	previous_state = "0"
 		#	final_decision = 0
 		#	current_state = "0"
-		#	who_plan = {current_state: {"MF": True, "MB": True, "DQN": True}}
+		#	who_plan[current_state] = {experts_id[0]: True, experts_id[1]: True}
 		#	meta_controller_system = MetaController(experiment, map_file, initial_variables, boundaries_exp, beta_MC, criterion, coeff_kappa, log)
-			#DQN_agent = DQN(experiment, map_file, initial_variables, action_space, state_space, boundaries_exp, parameters_DQN, log)
 		# ---------------------------------------------------------------------------
 
 
@@ -183,7 +192,7 @@ def manage_arguments():
 	Manage the arguments of the script
 	"""
 	# -------------------------------------------------------------------------------
-	usage = "usage: main.py [options] [the id of the experiment] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
+	usage = "usage: agentSimulator.py [options] [the id of the experiment] [the id of the first expert] [the id of the second expert] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
 	parser = OptionParser(usage)
 	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts", default = "random")
 	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time", default = 1.0)
@@ -197,26 +206,29 @@ def manage_arguments():
 	# -------------------------------------------------------------------------------
 	(options, args) = parser.parse_args()
 	# -------------------------------------------------------------------------------
-	if len(args) != 5:
+	if len(args) != 7:
 		parser.error("wrong number of arguments")
 	else:
 		experiment = sys.argv[1]
-		map_file = sys.argv[2]
-		key_states_file = sys.argv[3]
-		spaces_file = sys.argv[4]
-		parameters_file = sys.argv[5]
+		expert_1 = sys.argv[2]
+		expert_2 = sys.argv[3]
+		map_file = sys.argv[4]
+		key_states_file = sys.argv[5]
+		spaces_file = sys.argv[6]
+		parameters_file = sys.argv[7]
 	# -------------------------------------------------------------------------------
-	return(experiment, map_file, key_states_file, spaces_file, parameters_file, options)
+	return(experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options)
 	# -------------------------------------------------------------------------------
 
 
 if __name__ == "__main__":                          
 	# -------------------------------------------------------------------------------
 	# Manage the arguments et parse the parameters
-	experiment, map_file, key_states_file, spaces_file, parameters_file, options = manage_arguments()
+	experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options = manage_arguments()
 	parameters_MF, parameters_MB, parameters_DQN, beta_MC = parse_parameters(parameters_file)
 	# -------------------------------------------------------------------------------
-	# Initialize and gather the variables and the constants
+	# Initialize and regroup the variables and the constants
+	experts = (expert_1, expert_2)
 	spaces = load_spaces(spaces_file)
 	boundaries_exp = {"max_reward": options.max_reward, "duration": options.duration, "window_size": options.window_size, "epsilon": 0.01}
 	changes_exp = {"new_goal": options.new_goal, "add_wall": options.add_wall}
@@ -226,14 +238,25 @@ if __name__ == "__main__":
 	initial_variables = {"action_count": 0, "decided_action": 0, "actions_prob": 1/spaces["actions"], "previous_state": "0", "current_state": "0", \
 	"qvalue": 1, "delta": 0.0, "plan_time": 0.0, "reward": 0}
 	# -------------------------------------------------------------------------------
-	# Create instances for the 3 systems used by the virtual agent
-	meta_controller = MetaController(experiment, map_file, initial_variables, boundaries_exp, beta_MC, criterion, coeff_kappa, log)
-	model_free_agent = ModelFree(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MF, log)
-	model_based_agent = ModelBased(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MB, log)
-	#DQN_agent = DQN(experiment, map_file, initial_variables, action_space, state_space, boundaries_exp, parameters_DQN, log)
+	# Create instances for the systems used by the virtual agent
+	meta_controller = MetaController(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, beta_MC, criterion, coeff_kappa, log)
+	experts_to_run = list()
+	for expert in experts:
+		if expert == "MF":
+			new_expert = ModelFree(expert, experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MF, log)
+			experts_to_run.append(new_expert)
+		elif expert == "MB":
+			new_expert = ModelBased(expert, experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MB, log)
+			experts_to_run.append(new_expert)
+		elif expert == "DQN":
+			new_expert = DQN(expert, experiment, map_file, initial_variables, spaces, boundaries_exp, parameters_DQN, log)
+			experts_to_run.append(new_expert)
+		elif expert == "None":
+			new_expert = None
+			experts_to_run.append(new_expert)
 	# -------------------------------------------------------------------------------
 	# Run the simulation
-	run_simulation(map_file, model_free_agent, model_based_agent, meta_controller, spaces, boundaries_exp, changes_exp, initial_variables)
+	run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables)
 	# -------------------------------------------------------------------------------
 	
 

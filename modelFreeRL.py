@@ -23,18 +23,18 @@ from utility import *
 
 VERSION = 1
 
-
 class ModelFree:
 	"""
 	This class implements a model-free learning algorithm (q-learning).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
 		"""
 		Iinitialise values and models
 		"""
 		# ---------------------------------------------------------------------------
 		# Initialise all the variables which will be used
+		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]

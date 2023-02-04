@@ -29,12 +29,13 @@ class DQN:
 	This class implements a model-free learning algorithm (q-learning).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, state_space, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, map_file, initial_variables, spaces, boundaries_exp, parameters, log):
 		"""
 		Iinitialise values and models
 		"""
 		# ---------------------------------------------------------------------------
 		# Initialise all the variables which will be used
+		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
@@ -58,8 +59,8 @@ class DQN:
 		init_plan_time = initial_variables["plan_time"]
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
-		self.action_space = action_space
-		self.state_space = state_space
+		self.action_space = spaces["actions"]
+		self.state_space = spaces["states"]
 		# ---------------------------------------------------------------------------
 		# Build DQN models
 		self.model = self._build_model()

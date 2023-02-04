@@ -20,7 +20,6 @@ __status__ = "Production"
 
 from utility import *
 
-
 def initialize_environment(key_states_file):
 	"""
 	Initialize the environment 

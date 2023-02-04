@@ -8,7 +8,7 @@ to learn to solve the task.. It was developped by Jeanne Barthelemy during its i
 With this script, the simulated agent use a Prioritized Sweeping algorithm (model-based
 reinforcement learning) to learn to solve the task.
 
-Warning : Not connected to agentSimulator.py for the moment
+Warning : Currently not connected to the program
 '''
 
 __author__ = "Jeanne Barthelemy & Rémi Dromnelle"
