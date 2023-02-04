@@ -21,14 +21,14 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   
   In addition, it can also take 9 optional arguments :
   * (-c) the coordination criterion the agent will use, among this list : random (default value, entropy, entropy_and_cost, only_one.
-  * (-k) the value of the kappa coefficient (-k),
-  * (-r) the amount of reward expected before the simulation stops (-r),
-  * (-d) the maximum duration of the simulation (-d),
-  * (-w) the window size of the filtering (-w),
-  * (-n) the indication of an upcoming goal change for the agent (-n),
-  * (-a) the indication of an upcoming environmental change (-a),
-  * (-l) the record of the data (-l),
-  * (-s) the record of a compressed version of the data (-s).
+  * (-k) the value of the kappa coefficient,
+  * (-r) the amount of reward expected before the simulation stops,
+  * (-d) the maximum duration of the simulation,
+  * (-w) the window size of the filtering,
+  * (-n) the indication of an upcoming goal change for the agent,
+  * (-a) the indication of an upcoming environmental change,
+  * (-l) the record of the data,
+  * (-s) the record of a compressed version of the data.
   
 * The *modelFreeRL.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task,
