@@ -30,8 +30,13 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   * (-l) the record of the data,
   * (-s) the record of a compressed version of the data.
   
-  Exceptions and warning :
-  * ```"Error : 'expert' is not a known expert. The known experts are : ['MF', 'MB', 'DQN', 'None']"``` if one the expert (argument 2 and 3) are unknown.
+  Exceptions :
+  * ```Error : 'expert' is not a known expert. The known experts are : ['MF', 'MB', 'DQN', 'None']``` if one of the experts (arguments 2 and 3) are unknown.
+  * ```Error : 'criterion' is not a known criterion. The known criteria are : ["random", "entropy", "entropy_and_cost"]``` if the criterion (option -c) is unknown.
+  * ```Error : the agent need at least one expert to run.``` if the two experts (arguments 2 and 3) are both 'None'.
+
+  Warning :
+  * ```Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.```
   
 * The *modelFreeRL.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task,
@@ -66,6 +71,11 @@ reinforcement learning) to learn to solve the task,
 python agentSimulator.py 0 MF MB realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -d 1600 -c entropy_and_cost
 ```
 
-This code will run experiment 0, where an agent using an MB and MF expert will perform a navigation task for a duration of 1600 iterations, and using the "Entropy and Cost" coordination criterion.
+This code will run the experiment 0, where an agent using an MB and MF expert will perform a navigation task for a duration of 1600 iterations, and using the "Entropy and Cost" coordination criterion.
+
+```
+python agentSimulator.py 1 DQN None realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -r 100 -l -c entropy
+```
+This code will run the experiment 1, where an agent using only one expert (a DQN) will perform a navigation task until 100 units of reward are cumulated. Because only one expert is used, the "Entropy" coordination criterion will not be used. The data will be reccord.
 
 
