@@ -27,7 +27,7 @@ class MetaController:
 	will be allowed to schedule the next time.
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, beta_MC, criterion, coeff_kappa, log):
+	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, beta_MC, experts, criterion, coeff_kappa, log):
 		"""
 		Iinitialise values and models
 		"""
@@ -62,8 +62,8 @@ class MetaController:
 			os.mkdir("logs") 
 		os.chdir("logs")
 		if self.log == True:
-			self.MC_log = open(str(self.criterion)+"_coeff"+str(self.coeff_kappa)+"_exp"+str(self.experiment)+"_log.dat", "w")
-			self.MC_log.write(str(action_count)+" "+str(current_state)+" "+str(initial_reward)+" "+str(initial_duration)+" MB 0.5 0.0 0.0 0.0\n")
+			self.MC_log = open(f"exp{self.experiment}_{experts[0]}vs{experts[1]}_{self.criterion}_coeff{self.coeff_kappa}_log.dat", "w")
+			self.MC_log.write(f"{action_count} {current_state} {initial_reward} {initial_duration} {experts[0]} 0.5 0.0 0.0 0.0\n")
 		# ---------------------------------------------------------------------------
 		os.chdir("..")
 		# ---------------------------------------------------------------------------
@@ -299,23 +299,22 @@ class MetaController:
 			if value == True:
 				winner = key
 		# ---------------------------------------------------------------------------
-		# Logs
+		# If logs are recorded 
 		if self.log == True:
 			# -----------------------------------------------------------------------
+			# Count cumulated time
+			print(experts_id)
+			print(plan_time)
+			print(who_plan)
 			time = 0.0
-			if who_plan["MF"] == True:
-				time += plan_time["MF"]
-			if who_plan["MB"] == True:
-				time += plan_time["MB"]
-			if who_plan["DQN"] == True:
-				time += plan_time["DQN"]
+			for key, value in who_plan.items():
+				if value == True:
+					time += plan_time[experts_id.index(key)]
 			# -----------------------------------------------------------------------
-			if who_plan["MF"] == True:
-				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} MF {final_actions_prob['MF']} {self.norm_entropy['MF']} {self.norm_entropy['MB']} {filtered_time}\n")
-			elif who_plan["MB"] == True:
-				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} MB {final_actions_prob['MB']} {self.norm_entropy['MF']} {self.norm_entropy['MB']} {filtered_time}\n")
-			elif who_plan["DQN"] == True:
-				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} DQN {final_actions_prob['DQN']} {self.norm_entropy['DQN']} {self.norm_entropy['DQN']} {filtered_time}\n")
+			# Write log
+			for key, value in who_plan.items():
+				if value == True:
+					self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} {key} {final_actions_prob[key]} {self.norm_entropy[experts_id[0]]} {self.norm_entropy[experts_id[1]]} {filtered_time}\n")
 		# ---------------------------------------------------------------------------
 		return winner, who_plan
 		# ---------------------------------------------------------------------------

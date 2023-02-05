@@ -31,6 +31,11 @@ from DQN import *
 from manageEnvironment import *
 # -----------------------------------------------------------------------------------
 
+KNOWN_EXPERTS = ["MF", "MB", "DQN", "None"]
+KNOWN_CRITERIA = ["random", "entropy", "entropy_and_cost"]
+
+# -----------------------------------------------------------------------------------
+
 def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables):
 	"""
 	Run the simulation
@@ -194,6 +199,8 @@ def manage_arguments():
 	# -------------------------------------------------------------------------------
 	usage = "usage: agentSimulator.py [options] [the id of the experiment] [the id of the first expert] [the id of the second expert] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
 	parser = OptionParser(usage)
+	# -------------------------------------------------------------------------------
+	# OPTIONS
 	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts", default = "random")
 	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time", default = 1.0)
 	parser.add_option("-r", "--max_reward", action = "store", type = "int", dest = "max_reward", help = "This option is the maximum cumulated reward that the agent will reach before to stop.", default = 10000)
@@ -206,8 +213,9 @@ def manage_arguments():
 	# -------------------------------------------------------------------------------
 	(options, args) = parser.parse_args()
 	# -------------------------------------------------------------------------------
+	# ARGUMENTS
 	if len(args) != 7:
-		parser.error("wrong number of arguments")
+		parser.error("Wrong number of arguments")
 	else:
 		experiment = sys.argv[1]
 		expert_1 = sys.argv[2]
@@ -217,7 +225,39 @@ def manage_arguments():
 		spaces_file = sys.argv[6]
 		parameters_file = sys.argv[7]
 	# -------------------------------------------------------------------------------
-	return(experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options)
+	print("\n")
+	error = False
+	# Check if expert_1 exists. If not, quit the program.
+	try:
+		KNOWN_EXPERTS.index(expert_1)
+	except ValueError:
+		print(f"Error : '{expert_1}' is not a known expert. The known experts are : {KNOWN_EXPERTS}")
+		error = True
+	# Check if expert_2 exists. If not, quit the program.
+	try:
+		KNOWN_EXPERTS.index(expert_2)
+	except ValueError:
+		print(f"Error : '{expert_2}' is not a known expert. The known experts are : {KNOWN_EXPERTS}")
+		error = True
+	# Check if options.criterion exists. If not, quit the program.
+	try:
+		KNOWN_CRITERIA.index(options.criterion)
+	except ValueError:
+		print(f"Error : '{options.criterion}' is not a known criterion. The known criteria are : {KNOWN_CRITERIA}")
+		error = True
+	# Check if at least one expert is defined. If not, quit the program.
+	if expert_1 == expert_2 == "None":
+		print(f"Error : the agent need at least one expert to run.")
+		error = True
+	# If only one expert is used, notify that the  critertion of coordination will be not used
+	elif expert_1 == "None" or expert_2 == "None":
+		print(f"Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.")
+		options.criterion = "only_one"
+	# -------------------------------------------------------------------------------
+	if error == True:
+		quit()
+	else:
+		return(experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options)
 	# -------------------------------------------------------------------------------
 
 
@@ -239,7 +279,7 @@ if __name__ == "__main__":
 	"qvalue": 1, "delta": 0.0, "plan_time": 0.0, "reward": 0}
 	# -------------------------------------------------------------------------------
 	# Create instances for the systems used by the virtual agent
-	meta_controller = MetaController(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, beta_MC, criterion, coeff_kappa, log)
+	meta_controller = MetaController(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, beta_MC, experts, criterion, coeff_kappa, log)
 	experts_to_run = list()
 	for expert in experts:
 		if expert == "MF":

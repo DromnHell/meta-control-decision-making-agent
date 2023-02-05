@@ -429,21 +429,7 @@ class DQN:
 		else:
 			self.not_learn = False
 		# ---------------------------------------------------------------------------
-		# Logs
-		# if self.log == True:
-		# 	self.reward_log.write("timecount"+" "+str(action_count)+" "+str(reward_obtained)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	self.states_evolution_log.write("timecount"+" "+str(action_count)+" "+current_state+" "+previous_state+ \
-		# 		" currentContactState"+" currentViewState"+" "+str(decided_action)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	#self.qvalues_evolution_log.write(",\n"+json.dumps(self.dict_qvalues))
-		# 	self.actions_evolution_log.write(",\n"+json.dumps(self.dict_actions_prob))
-		# 	self.monitoring_values_log.write(str(action_count)+" "+str(decided_action)+" "+str(plan_time)+" "+str(selection_prob)+" "+str(prefered_action)+"\n")
-		# ---------------------------------------------------------------------------
-		# Finish the logging at the end of the simulation (duration or max reward)
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
-			#if self.log == True:
-			#	self.qvalues_evolution_log.write('],\n"name" : "Qvalues"\n}')
-			#	self.actions_evolution_log.write('],\n"name" : "Actions"\n}')
-			# -----------------------------------------------------------------------
 			# Build the summary file 
 			if self.summary == True:
 				if self.directory_flag == True:

@@ -226,8 +226,8 @@ class ModelFree:
 				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
 		else:
 			self.not_learn = False
+		# ---------------------------------------------------------------------------
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
-			# -----------------------------------------------------------------------
 			# Build the summary file 
 			if self.summary == True:
 				if self.directory_flag == True:
