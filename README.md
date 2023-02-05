@@ -12,15 +12,15 @@ The main objective of my thesis was to create a meta-control algorithm that allo
 
   It takes as input 7 mandatory ordered arguments :
   1.  the id of the experiment that we are going to launch. It must be an integer.
-  2.  the id of the first expert, among this list : MF, MB, DQN, None.
-  3.  the id of the second expert among this list : MF, MB, DQN, None.
+  2.  the id of the first expert, among this list : MF, MB, DQN.
+  3.  the id of the second expert among this list : MF, MB, DQN.
   4.  the file that contains the representation of the environment,
   5.  the file that describes the key states of the environment,
   7.  the file that describes the state space and the action space,
   7.  the file that contains the parameters of the agent.
   
   In addition, it can also take 9 optional arguments :
-  * (-c) the coordination criterion the agent will use, among this list : random (default value, entropy, entropy_and_cost, only_one.
+  * (-c) the coordination criterion the agent will use, among this list : random (default value), entropy, entropy_and_cost.
   * (-k) the value of the kappa coefficient,
   * (-r) the amount of reward expected before the simulation stops,
   * (-d) the maximum duration of the simulation,
