@@ -57,5 +57,9 @@ reinforcement learning) to learn to solve the task,
 
 ## Example of a command to run the program
 
-python agentSimulator.py 0 realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -d 1600
+```
+python agentSimulator.py 0 realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -d 1600 -c entropy_and_cost
+```
+
+This code will run experiment 0, where an agent will perform a navigation task for a duration of 1600 iterations, and using the "Entropy and Cost" coordination criterion.
 
