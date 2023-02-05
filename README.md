@@ -30,6 +30,9 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   * (-l) the record of the data,
   * (-s) the record of a compressed version of the data.
   
+  Exceptions and warning :
+  * ```"Error : 'expert' is not a known expert. The known experts are : ['MF', 'MB', 'DQN', 'None']"``` if one the expert (argument 2 and 3) are unknown.
+  
 * The *modelFreeRL.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task,
 * The *modelBasedRL.py* script allows the agent to use a Value-Iteration algorithm (model-based reinforcement learning) to learn to solve the task,
