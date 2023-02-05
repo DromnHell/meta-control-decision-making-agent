@@ -65,7 +65,7 @@ reinforcement learning) to learn to solve the task,
 * numpy
 * tensorflow
 
-## Example of a command to run the program
+## Example of a commands to run the program
 
 ```
 python agentSimulator.py 0 MF MB realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -d 1600 -c entropy_and_cost
