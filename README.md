@@ -83,7 +83,7 @@ python agentSimulator.py 1 DQN None realisticNavWorld.json keyStates.txt spaces.
 ```
 This code will run the experiment 1, where an agent using only one expert (a DQN) will perform a navigation task until 100 units of reward are cumulated. Because only one expert is used, the "Entropy" coordination criterion will not be used (see "Warning" above). The data will be reccorded.
 
-## Example of an output file when the -l option is set
+## Example of an output file when the log option is set
 
 
 ```
