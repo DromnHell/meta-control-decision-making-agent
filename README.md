@@ -38,7 +38,7 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   * ```Error : the agent need at least one expert to run.``` if the two experts (arguments 2 and 3) are both 'None'.
 
   Warning :
-  * ```Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.```
+  * ```Warning : with only one expert, the criterion of coordination will not be used, because there will be no experts to coordinate.```
 
 * The *modelFreeRL.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
 to learn to solve the task.
