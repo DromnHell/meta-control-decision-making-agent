@@ -238,42 +238,42 @@ def manage_arguments():
 		spaces_file = sys.argv[6]
 		parameters_file = sys.argv[7]
 	# -------------------------------------------------------------------------------
+	print("\n")
+	# -------------------------------------------------------------------------------
 	# ERRORS
 	error = False
 	# Check if expert_1 exists. If not, quit the program.
 	try:
 		KNOWN_EXPERTS.index(expert_1)
 	except ValueError:
-		print(f"Error : '{expert_1}' is not a known expert. The known experts are : {KNOWN_EXPERTS}")
+		print(f"Error : '{expert_1}' is not a known expert. The known experts are : {KNOWN_EXPERTS}\n")
 		error = True
 	# Check if expert_2 exists. If not, quit the program.
 	try:
 		KNOWN_EXPERTS.index(expert_2)
 	except ValueError:
-		print(f"Error : '{expert_2}' is not a known expert. The known experts are : {KNOWN_EXPERTS}")
+		print(f"Error : '{expert_2}' is not a known expert. The known experts are : {KNOWN_EXPERTS}\n")
+		error = True
+	# Check if the two experts are the same. If true, quit the program.
+	if expert_1 == expert_2:
+		print(f"Error : the two experts used by the agent must be different.\n")
+		error = True
+	# Check if at least one expert is defined. If not, quit the program.
+	if expert_1 == expert_2 == "None":
+		print(f"Error : the agent need at least one expert to run.\n")
 		error = True
 	# Check if options.criterion exists. If not, quit the program.
 	try:
 		KNOWN_CRITERIA.index(options.criterion)
 	except ValueError:
-		print(f"Error : '{options.criterion}' is not a known criterion. The known criteria are : {KNOWN_CRITERIA}")
-		error = True
-	# Check if the two experts are the same. If true, quit the program.
-	if expert_1 == expert_2:
-		print(f"Error : the two experts used by the agent must be different.")
-		error = True
-	# Check if at least one expert is defined. If not, quit the program.
-	if expert_1 == expert_2 == "None":
-		print(f"Error : the agent need at least one expert to run.")
+		print(f"Error : '{options.criterion}' is not a known criterion. The known criteria are : {KNOWN_CRITERIA}\n")
 		error = True
 	# -------------------------------------------------------------------------------
 	# WARNING
 	# If only one expert is used, notify that the  critertion of coordination will be not used
-	elif expert_1 == "None" or expert_2 == "None":
-		print(f"Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.")
+	if expert_1 == "None" or expert_2 == "None":
+		print(f"Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.\n")
 		options.criterion = "no_coordination"
-	# -------------------------------------------------------------------------------
-	print("\n")
 	# -------------------------------------------------------------------------------
 	if error == True:
 		quit()
