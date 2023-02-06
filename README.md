@@ -62,9 +62,9 @@ reinforcement learning) to learn to solve the task,
  
 ## Dependencies
 
-* python 3
+* python 3.10
+* tensorflow 2.9
 * numpy
-* tensorflow
 
 ## Example of commands to run the program
 
