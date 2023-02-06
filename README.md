@@ -60,13 +60,9 @@ reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM
 * The *spaces.txt* file contains the actions space and the states space.
 * The *parameters.txt* file contains the parameters of the agent.
 
-#### Photo of the arena and the robot. The red state is the rewarded one.
+#### Photo of the arena and the map autonomously build by the robot. The *realisticNavWorld.json* file is an abstraction of this map.
 
-![arena](https://raw.githubusercontent.com/DromnHell/meta-control-decision-making-agent/main/photo_arene.png)
-
-#### Map autonomously build by the robot. The *realisticNavWorld.json* file is an abstraction of this map.
-
-![map](https://raw.githubusercontent.com/DromnHell/meta-control-decision-making-agent/main/cartes_changements.png)
+![arena](https://raw.githubusercontent.com/DromnHell/meta-control-decision-making-agent/main/map_actions_photo.png)
  
 ## Dependencies
 
