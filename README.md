@@ -77,6 +77,6 @@ This code will run the experiment 0, where an agent using an MB and MF expert wi
 ```
 python agentSimulator.py 1 DQN None realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -r 100 -l -c entropy
 ```
-This code will run the experiment 1, where an agent using only one expert (a DQN) will perform a navigation task until 100 units of reward are cumulated. Because only one expert is used, the "Entropy" coordination criterion will not be used. The data will be reccord.
+This code will run the experiment 1, where an agent using only one expert (a DQN) will perform a navigation task until 100 units of reward are cumulated. Because only one expert is used, the "Entropy" coordination criterion will not be used (see "Warning" above). The data will be reccorded.
 
 
