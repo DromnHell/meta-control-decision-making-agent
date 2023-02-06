@@ -78,3 +78,16 @@ This code will run the experiment 0, where an agent using an MB and MF expert wi
 python agentSimulator.py 1 DQN None realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -r 100 -l -c entropy
 ```
 This code will run the experiment 1, where an agent using only one expert (a DQN) will perform a navigation task until 100 units of reward are cumulated. Because only one expert is used, the "Entropy" coordination criterion will not be used (see "Warning" above). The data will be reccorded.
+
+## Example of an output file when the -l option is set
+
+
+```
+...
+1598 18 1 9.936632209345335e-07 MF 0.9233713747401607 1.0 1.0 5.608592928084312e-05
+1599 0 0 9.462273008389549e-07 MF 0.9904485966915921 0.6847743322036773 0.6494277836137697 6.362911275139294e-05
+1600 0 0 9.784909203355819e-07 MF 0.9968824302693863 0.674786980876488 0.658064217038684 6.505164510055717e-05
+```
+
+[iteration] [current state] [reward obtained] [time of planning] [the winner expert who controlled the robot] [probability of selection of the action that has been performed] [entropy of the distribution of action selection probabilities of the winner expert] [same metric for the looser expert] [cumulated filtered planning time]
+
