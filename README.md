@@ -59,6 +59,9 @@ reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM
 * The *keyStates.txt* file contains the id of the rewarded states and the initial states.
 * The *spaces.txt* file contains the actions space and the states space.
 * The *parameters.txt* file contains the parameters of the agent.
+
+h![ezcv logo](ttps://raw.githubusercontent.com/DromnHell/ meta-control-decision-making-agent
+/main/photo_arene.png)
  
 ## Dependencies
 
