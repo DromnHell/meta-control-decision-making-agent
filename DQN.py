@@ -14,7 +14,7 @@ to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -23,27 +23,27 @@ from utility import *
 
 VERSION = 1
 
-
 class DQN:
 	"""
-	This class implements a model-free learning algorithm (q-learning).
+	This class implements a model-free deed reinforcement learning algorithm (Deep Q-Network).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, state_space, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, map_file, initial_variables, spaces, boundaries_exp, parameters, log):
 		"""
 		Iinitialise values and models
 		"""
 		# ---------------------------------------------------------------------------
 		# Initialise all the variables which will be used
+		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
-		self.gamma = 0.95
-		self.alpha = 0.1
+		self.alpha = parameters["alpha"]
+		self.gamma = parameters["gamma"]
 		self.alpha_min = 0.01
 		self.alpha_decay = 1.001
-		self.beta = 40
+		self.beta = parameters["beta"]
 		self.beta_max = 50
 		self.beta_decay = 1.005
 		self.log = log["log"]
@@ -58,8 +58,8 @@ class DQN:
 		init_plan_time = initial_variables["plan_time"]
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
-		self.action_space = action_space
-		self.state_space = state_space
+		self.action_space = spaces["actions"]
+		self.state_space = spaces["states"]
 		# ---------------------------------------------------------------------------
 		# Build DQN models
 		self.model = self._build_model()
@@ -106,14 +106,14 @@ class DQN:
 			s = str(state["state"])
 			t = state["transitions"]
 			# -----------------------------------------------------------------------
-			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*8
+			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*self.action_space
 			self.dict_qvalues[(s,"visits")] = 0
 			# -----------------------------------------------------------------------
 			# - initialise the "probabilties of actions" dict
-			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*8, "filtered_prob": [init_actions_prob]*8})
+			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*self.action_space, "filtered_prob": [init_actions_prob]*self.action_space})
 			# -----------------------------------------------------------------------
 			# - initialise the "identity of the selected action" dict
-			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*6,[0]*6,[0]*6,[0]*6,[0]*6,[0]*6,[0]*6,[0]*6]})
+			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*self.window_size]*self.action_space})
 			# -----------------------------------------------------------------------
 			# - initialise the duration dict
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
@@ -207,7 +207,7 @@ class DQN:
 		actions = dict()
 		qvals = dict()
 		# ----------------------------------------------------------------------------
-		for a in range(0,8):
+		for a in range(0,self.action_space):
 			actions[str(a)] = a
 			qvals[str(a)] = qvalues[a]
 		# ----------------------------------------------------------------------------
@@ -333,29 +333,9 @@ class DQN:
 		self.replay_memory.append((input_ps, decided_action, reward_obtained, input_cs))
 		# ----------------------------------------------------------------------------
 
-	def meta_learning(self, reward_obtained, cumulated_reward, current_state):
-		# ----------------------------------------------------------------------------
-		# Save the identity of final state
-		if reward_obtained == 1:
-			self.final_state = current_state
-		# Reset the value of beta and alpha if the final state doesn't give reward anymore
-		if current_state == self.final_state and reward_obtained != 1:
-			self.beta = 1
-			#self.alpha = 0.6
-		# ----------------------------------------------------------------------------
-		# Progressively increase the beta and decrease the alpha values
-		if cumulated_reward > 0:
-			if self.beta < self.beta_max:
-				self.beta *= self.beta_decay
-			if self.alpha > self.alpha_min:
-				self.alpha /= self.alpha_decay
-		print("Beta = "+str(self.beta))
-		print("Alpha = "+str(self.alpha))
-		# ----------------------------------------------------------------------------
-
 	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan): 
 		"""
-		Run the model-free system
+		Run the model-free Deep RL expert
 		"""
 		# ----------------------------------------------------------------------------
 		print("------------------------ DQN --------------------------------")
@@ -372,8 +352,6 @@ class DQN:
 		self.input_cs = np.array([0]*self.state_space)
 		self.input_cs[int(current_state)] = 1
 		# ----------------------------------------------------------------------------
-		#self.meta_learning(reward_obtained, cumulated_reward, current_state)
-		# ----------------------------------------------------------------------------
 		if self.not_learn == False:
 			self.update_memory(self.input_ps, decided_action, reward_obtained, self.input_cs)
 			# Save the transition on memory for replaying
@@ -381,8 +359,6 @@ class DQN:
 				self.learn_whith_replay()
 			#if cumulated_reward > 0:
 			#	self.learn(reward_obtained, decided_action)
-		else:
-			print("Not learn at this iteration !")
 		# ----------------- ----------------------------------------------------------
 		self.target_update_counter += 1
 		if self.target_update_counter == self.update_target_every:
@@ -411,7 +387,7 @@ class DQN:
 		# ----------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
-		prefered_action = [0]*8
+		prefered_action = [0]*self.action_space
 		for action in range(0,len(prefered_action)):
 			for dictStateValues in self.dict_decision["values"]:
 				if dictStateValues["state"] == current_state:
@@ -423,26 +399,12 @@ class DQN:
 		# ----------------------------------------------------------------------------
 		if reward_obtained > 0.0:
 			self.not_learn = True
-			for a in range(0,8):
-				self.dict_qvalues[(current_state,"qvals")] = [0.0]*8
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
 		else:
 			self.not_learn = False
 		# ---------------------------------------------------------------------------
-		# Logs
-		# if self.log == True:
-		# 	self.reward_log.write("timecount"+" "+str(action_count)+" "+str(reward_obtained)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	self.states_evolution_log.write("timecount"+" "+str(action_count)+" "+current_state+" "+previous_state+ \
-		# 		" currentContactState"+" currentViewState"+" "+str(decided_action)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	#self.qvalues_evolution_log.write(",\n"+json.dumps(self.dict_qvalues))
-		# 	self.actions_evolution_log.write(",\n"+json.dumps(self.dict_actions_prob))
-		# 	self.monitoring_values_log.write(str(action_count)+" "+str(decided_action)+" "+str(plan_time)+" "+str(selection_prob)+" "+str(prefered_action)+"\n")
-		# ---------------------------------------------------------------------------
-		# Finish the logging at the end of the simulation (duration or max reward)
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
-			#if self.log == True:
-			#	self.qvalues_evolution_log.write('],\n"name" : "Qvalues"\n}')
-			#	self.actions_evolution_log.write('],\n"name" : "Actions"\n}')
-			# -----------------------------------------------------------------------
 			# Build the summary file 
 			if self.summary == True:
 				if self.directory_flag == True:
@@ -452,9 +414,9 @@ class DQN:
 				self.summary_log = open(prefixe+'summary_log.dat', 'a')
 				self.summary_log.write(str(self.alpha)+" "+str(self.gamma)+" "+str(self.beta)+" "+str(cumulated_reward)+"\n")
 		# ---------------------------------------------------------------------------
-		print("Qvalues : ")
-		for action in range(0,8):
-			print(self.dict_qvalues[str(current_state),"qvals"][int(action)])
+		#print("Qvalues : ")
+		#for action in range(0,self.action_space):
+			#print(self.dict_qvalues[str(current_state),"qvals"][int(action)])
 		# ----------------------------------------------------------------------------
 		return decided_action
 		# ----------------------------------------------------------------------------

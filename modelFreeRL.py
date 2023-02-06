@@ -14,7 +14,7 @@ to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -23,18 +23,18 @@ from utility import *
 
 VERSION = 1
 
-
 class ModelFree:
 	"""
-	This class implements a model-free learning algorithm (q-learning).
+	This class implements a model-free reinforcement learning algorithm (Q-learning).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
 		"""
 		Iinitialise values and models
 		"""
 		# ---------------------------------------------------------------------------
 		# Initialise all the variables which will be used
+		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
@@ -119,7 +119,7 @@ class ModelFree:
 		actions = dict()
 		qvals = dict()
 		# ----------------------------------------------------------------------------
-		for a in range(0,8):
+		for a in range(0,self.action_space):
 			actions[str(a)] = a
 			qvals[str(a)] = qvalues[a]
 		# ----------------------------------------------------------------------------
@@ -174,7 +174,7 @@ class ModelFree:
 
 	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan): 
 		"""
-		Run the model-free system
+		Run the model-free RL expert
 		"""
 		# ---------------------------------------------------------------------------
 		print("------------------------ MF --------------------------------")
@@ -222,12 +222,12 @@ class ModelFree:
 		# ---------------------------------------------------------------------------
 		if reward_obtained > 0.0:
 			self.not_learn = True
-			for a in range(0,8):
+			for a in range(0,self.action_space):
 				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
 		else:
 			self.not_learn = False
+		# ---------------------------------------------------------------------------
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
-			# -----------------------------------------------------------------------
 			# Build the summary file 
 			if self.summary == True:
 				if self.directory_flag == True:
@@ -238,7 +238,7 @@ class ModelFree:
 				self.summary_log.write(f"{self.alpha} {self.gamma} {self.beta} {cumulated_reward}\n")
 		# ---------------------------------------------------------------------------
 		#print("Qvalues : ")
-		#for action in range(0,8):
+		#for action in range(0,self.action_space):
 			#print(self.dict_qvalues[str(current_state),"qvals"][int(action)])
 		# ----------------------------------------------------------------------------
 		return decided_action

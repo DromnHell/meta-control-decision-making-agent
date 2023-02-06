@@ -9,28 +9,25 @@ Girard, B., & Khamassi, M. (2022). Reducing Computational Cost During Robot Navi
 Human–Robot Interaction with a Human-Inspired Reinforcement Learning Architecture. 
 International Journal of Social Robotics, 1-27."
 
-With this script, the simulated agent can do meta-control and coordinate different 
+With this script, the simulated agent can do meta-control to coordinate differents 
 behavioral strategies.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
 
 from utility import *
 
-VERSION = 1
-
-
 class MetaController:
 	"""
-	This class implements a meta-controller that allows the agent to choose between
-	several possible decisions according to some crieria
+	This class implements a meta-controller tha allows the agent to choose which expert 
+	will be allowed to schedule at the next iteration.
     """
 
-	def __init__(self, experiment, map_file, initial_variables, boundaries_exp, beta_MC, criterion, coeff_kappa, log):
+	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log):
 		"""
 		Iinitialise values and models
 		"""
@@ -40,7 +37,9 @@ class MetaController:
 		action_count = initial_variables["action_count"]
 		initial_reward = initial_variables["reward"]
 		initial_duration = initial_variables["plan_time"]
-		self.beta_MC = beta_MC
+		self.action_space = action_space
+		self.beta_MC = parameters_MC["beta"]
+		self.alpha = parameters_MC["alpha"]
 		self.criterion = criterion
 		self.coeff_kappa = coeff_kappa
 		self.log = log["log"]
@@ -63,58 +62,60 @@ class MetaController:
 		except:
 			os.mkdir("logs") 
 		os.chdir("logs")
-		# try:
-		# 	os.stat("MC")
-		# except:
-		# 	os.mkdir("MC") 
-		# os.chdir("MC")c
 		if self.log == True:
-			self.MC_log = open(str(self.criterion)+"_coeff"+str(self.coeff_kappa)+"_exp"+str(self.experiment)+"_log.dat", "w")
-			self.MC_log.write(str(action_count)+" "+str(current_state)+" "+str(initial_reward)+" "+str(initial_duration)+" MB 0.5 0.0 0.0 0.0\n")
+			self.MC_log = open(f"exp{self.experiment}_{experts[0]}vs{experts[1]}_{self.criterion}_coeff{self.coeff_kappa}_log.dat", "w")
+			self.MC_log.write(f"{action_count} {current_state} {initial_reward} {initial_duration} {experts[0]} 0.5 0.0 0.0 0.0\n")
 		# ---------------------------------------------------------------------------
 		os.chdir("..")
 		# ---------------------------------------------------------------------------
 
 
-	def entropy_and_time(self, duration, selection_prob):
+	def entropy_and_cost(self, experts_id, duration, selection_prob):
 		"""
-		Choose the best action according to a trade-off betwen the time of planning 
-		and the quality of learning (entropy of the ditribution probability of the actions). These parameters
-		are normalized.
+		Determine which expert will plan according to a trade-off betwen the cost 
+		(time of planning) and the quality of learning (entropies of the probabilities 
+		ditribution of the actions).
 		"""
+		# ---------------------------------------------------------------------------
+		entropy_probs = list()
+		for it, probs in enumerate(selection_prob):
+			norm_prob = [prob / sum(probs) for prob in probs]
+			entropy = shanon_entropy(norm_prob)
+			entropy_probs.append(entropy)
+			print(f"Entropy {experts_id[it]} : {entropy}")
 		# ---------------------------------------------------------------------------
-		norm_probs_MF = [prob / sum(selection_prob["MF"]) for prob in selection_prob["MF"]]
-		norm_probs_MB = [prob / sum(selection_prob["MB"]) for prob in selection_prob["MB"]]
+		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
+		highest_entropy = max(entropy_probs)
+		mean_entropy = sum(entropy_probs) / 2
+		# ---------------------------------------------------------------------------
+		self.norm_entropy = dict()
+		for it, prob in enumerate(entropy_probs):
+			norm_entropy = prob / max_entropy
+			self.norm_entropy[experts_id[it]] = norm_entropy
+			print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
 		# ---------------------------------------------------------------------------
-		entropy_probs_MF = shanon_entropy(norm_probs_MF)
-		print(f"Entropy MF : {entropy_probs_MF}")
-		entropy_probs_MB = shanon_entropy(norm_probs_MB)
-		print(f"Entropy MB : {entropy_probs_MB}")
-		# ---------------------------------------------------------------------------
-		max_entropy = shanon_entropy([1/(len(norm_probs_MF))]*len(norm_probs_MF))
-		highest_entropy = max(entropy_probs_MF,entropy_probs_MB)
-		mean_entropy = (entropy_probs_MF + entropy_probs_MB) / 2
-		# ---------------------------------------------------------------------------
-		norm_entropy_MF = entropy_probs_MF / max_entropy
-		norm_entropy_MB = entropy_probs_MB / max_entropy
-		self.norm_entropy = {"MF": norm_entropy_MF, "MB": norm_entropy_MB}
-		print(f"Norm entropy MF : {norm_entropy_MF}")
-		print(f"Norm entropy MB : {norm_entropy_MB}")
-		# ---------------------------------------------------------------------------
-		max_duration = max(duration["MF"],duration["MB"])
+		max_duration = max(duration)
 		if max_duration == 0.0:
 			max_duration = 0.000000000001
-		norm_duration_MF = (duration["MF"]) / max_duration
-		norm_duration_MB = (duration["MB"]) / max_duration
+		norm_duration = list()
+		for d in duration:
+			norm_duration.append(d / max_duration)
 		# ---------------------------------------------------------------------------
-		coeff  = math.exp(-entropy_probs_MF * self.coeff_kappa)
-		print(f"Coeff : exp(-{entropy_probs_MF} * {self.coeff_kappa}) = {coeff}")
+		entropy = mean_entropy
+		coeff = math.exp(-entropy * self.coeff_kappa)
+		# If there is a MF expert, its entropy is choosen instead of the mean entropy
+		for it, expert in enumerate(experts_id):
+			if expert == "MF":
+				entropy = entropy_probs[it]
+				coeff = math.exp(-entropy * self.coeff_kappa)
+				break
+		print(f"Coeff : exp(-{entropy} * {self.coeff_kappa}) = {coeff}")
 		# ---------------------------------------------------------------------------
-		qval_MF = - (norm_entropy_MF + coeff * norm_duration_MF)
-		print(f"Qval MF : - ({norm_entropy_MF} + {coeff} * {norm_duration_MF}) = {qval_MF}")
-		qval_MB = - (norm_entropy_MB + coeff * norm_duration_MB)
-		print(f"Qval MB : - ({norm_entropy_MB} + {coeff} * {norm_duration_MB}) = {qval_MB}")
-		qvalues = {"MF": qval_MF, "MB": qval_MB}
+		qvalues = dict()
+		for index, (key, value) in enumerate(self.norm_entropy.items()):
+			qval = - (value + coeff * norm_duration[index])
+			qvalues[key] = qval
+			print(f"Qval {key} : - ({value} + {coeff} * {norm_duration[index]}) = {qval}")
 		# ---------------------------------------------------------------------------
 		# Soft-max function
 		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
@@ -122,142 +123,149 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 		# Arg-max function
 		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
-		if qval_MF > qval_MB:
-			expert = "MF"
-			who_plan = {"MF": True, "MB": False, "DQN": False}
-		elif qval_MF < qval_MB:
-			expert = "MB"
-			who_plan = {"MF": False, "MB": True, "DQN": False}
-		elif qval_MB == qval_MF:
-			randval = np.random.rand()
-			if randval >= 0.500000000:
-				expert = "MF"
-				who_plan = {"MF": True, "MB": False, "DQN": False}
-			elif randval < 0.50000000:
-				expert = "MB"
-				who_plan = {"MF": False, "MB": True, "DQN": False}
-		# ---------------------------------------------------------------------------
-		return final_actions_prob, who_plan
-		# ---------------------------------------------------------------------------
-
-
-	def entropy_only(self, selection_prob):
-		"""
-		Choose the best action according to the value of the entropies of the ditribution 
-		probability of the actions. These parametersare normalized.
-		"""
-		# ---------------------------------------------------------------------------
-		norm_probs_MF = [prob / sum(selection_prob["MF"]) for prob in selection_prob["MF"]]
-		norm_probs_MB = [prob / sum(selection_prob["MB"]) for prob in selection_prob["MB"]]
-		# ---------------------------------------------------------------------------
-		entropy_probs_MF = shanon_entropy(norm_probs_MF)
-		print(f"Entropy MF : {entropy_probs_MF}")
-		entropy_probs_MB = shanon_entropy(norm_probs_MB)
-		print(f"Entropy MB : {entropy_probs_MB}")
-		# ---------------------------------------------------------------------------
-		max_entropy = shanon_entropy([1/(len(norm_probs_MF))]*len(norm_probs_MF))
-		highest_entropy = max(entropy_probs_MF,entropy_probs_MB)
-		mean_entropy = (entropy_probs_MF + entropy_probs_MB) / 2
-		# ---------------------------------------------------------------------------
-		norm_entropy_MF = entropy_probs_MF / max_entropy
-		norm_entropy_MB = entropy_probs_MB / max_entropy
-		self.norm_entropy = {"MF": norm_entropy_MF, "MB": norm_entropy_MB}
-		print(f"Norm entropy MF : {norm_entropy_MF}")
-		print(f"Norm entropy MB : {norm_entropy_MB}")
-		# ---------------------------------------------------------------------------
-		qval_MF = - (norm_entropy_MF)
-		print(f"Qval MF : - {norm_entropy_MF}) = {qval_MF}")
-		qval_MB = - (norm_entropy_MB)
-		print(f"Qval MB : - {norm_entropy_MB}) = {qval_MB}")
-		qvalues = {"MF": qval_MF, "MB": qval_MB}
-		# ---------------------------------------------------------------------------
-		# Soft-max function
-		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
-		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
-		# ---------------------------------------------------------------------------
-		# Arg-max function
-		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
-		if qval_MF >= qval_MB:
-			expert = "MF"
-			who_plan = {"MF": True, "MB": False, "DQN": False}
+		who_plan = dict()
+		if qvalues[experts_id[0]] == qvalues[experts_id[1]]:
+			winner = random.choice(experts_id)
+			for expert in experts_id:
+				if expert == winner:
+					who_plan[expert] = True
+				else:
+					who_plan[expert] = False
 		else:
-			expert = "MB"
-			who_plan = {"MF": False, "MB": True, "DQN": False}
+			keymax = max(qvalues, key = lambda x: qvalues[x])
+			for expert in experts_id:
+				if keymax == expert:
+					who_plan[expert] = True
+				else:
+					who_plan[expert] = False
 		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
 
 
-	def only_one(self, selection_prob, expert):
+	def entropy(self, experts_id, selection_prob):
 		"""
-		Choose the action between those proposed randomly
+		Determine which expert will plan raccording to the value of the entropies of 
+		the probabilities ditribution of the actions.
 		"""
 		# ---------------------------------------------------------------------------
-		norm_probs_MF = [prob / sum(selection_prob["MF"]) for prob in selection_prob["MF"]]
-		norm_probs_MB = [prob / sum(selection_prob["MB"]) for prob in selection_prob["MB"]]
-		norm_probs_DQN = [prob / sum(selection_prob["DQN"]) for prob in selection_prob["DQN"]]
-		entropy_probs_MF = shanon_entropy(norm_probs_MF)
-		entropy_probs_MB = shanon_entropy(norm_probs_MB)
-		entropy_probs_DQN = shanon_entropy(norm_probs_DQN)
-		max_entropy = shanon_entropy([1/(len(norm_probs_MF))]*len(norm_probs_MF))
-		norm_entropy_MF = entropy_probs_MF / max_entropy
-		norm_entropy_MB = entropy_probs_MB / max_entropy
-		norm_entropy_DQN = entropy_probs_DQN / max_entropy
+		entropy_probs = list()
+		for it, probs in enumerate(selection_prob):
+			norm_prob = [prob / sum(probs) for prob in probs]
+			entropy = shanon_entropy(norm_prob)
+			entropy_probs.append(entropy)
+			print(f"Entropy {experts_id[it]} : {entropy}")
+		# ---------------------------------------------------------------------------
+		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
+		highest_entropy = max(entropy_probs)
+		mean_entropy = sum(entropy_probs) / 2
 		# ---------------------------------------------------------------------------
-		if expert == "MF": 
-			who_plan = {"MF": True, "MB": False, "DQN": False}
-			final_actions_prob = {"MF": 1, "MB": 0, "DQN": 0}
-			self.norm_entropy = {"MF": norm_entropy_MF, "MB": 0.0, "DQN": 0.0}
-		elif expert == "MB":
-			who_plan = {"MF": False, "MB": True, "DQN": False}
-			final_actions_prob = {"MF": 0, "MB": 1, "DQN": 0}
-			self.norm_entropy = {"MF": 0.0, "MB": norm_entropy_MB, "DQN": 0.0}
-		elif expert == "DQN":
-			who_plan = {"MF": False, "MB": False, "DQN": True}
-			final_actions_prob = {"MF": 0, "MB": 0, "DQN": 1}
-			self.norm_entropy = {"MF": 0.0, "MB": 0.0, "DQN": norm_entropy_DQN}
+		self.norm_entropy = dict()
+		for it, prob in enumerate(entropy_probs):
+			norm_entropy = prob / max_entropy
+			self.norm_entropy[experts_id[it]] = norm_entropy
+			print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
+		# ---------------------------------------------------------------------------
+		qvalues = dict()
+		for key, value in self.norm_entropy.items():
+			qvalues[key] = - value
+		# ---------------------------------------------------------------------------
+		# Soft-max function
+		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
+		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
+		# ---------------------------------------------------------------------------
+		# Arg-max function
+		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
+		who_plan = dict()
+		if qvalues[experts_id[0]] == qvalues[experts_id[1]]:
+			winner = random.choice(experts_id)
+			for expert in experts_id:
+				if expert == winner:
+					who_plan[expert] = True
+				else:
+					who_plan[expert] = False
+		else:
+			keymax = max(qvalues, key = lambda x: qvalues[x])
+			for expert in experts_id:
+				if keymax == expert:
+					who_plan[expert] = True
+				else:
+					who_plan[expert] = False
+		# ---------------------------------------------------------------------------
+		return final_actions_prob, who_plan
+		# ---------------------------------------------------------------------------
+
+
+	def no_coordination(self, experts_id, selection_prob):
+		"""
+		The agent used only one expert, so there is no coordination and only one expert can plan.
+		But we need this function to recorde the entropie values anyway.
+		"""
+		# ---------------------------------------------------------------------------
+		entropy_probs = list()
+		for it, probs in enumerate(selection_prob):
+			if experts_id[it] != None:
+				norm_prob = [prob / sum(probs) for prob in probs]
+				entropy_probs.append(shanon_entropy(norm_prob))
+			else:
+				entropy_probs.append(None)
+		# ---------------------------------------------------------------------------
+		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
+		# ---------------------------------------------------------------------------
+		norm_entropy = list()
+		for prob in entropy_probs:
+			if prob != None:
+				norm_entropy.append(prob / max_entropy)
+			else:
+				norm_entropy.append(None)
+		# ---------------------------------------------------------------------------
+		if experts_id[0] != None:
+			who_plan = {experts_id[0]: True, experts_id[1]: None}
+			final_actions_prob = {experts_id[0]: 1, experts_id[1]: None}
+			self.norm_entropy = {experts_id[0]: norm_entropy[0], experts_id[1]: None}
+		else:
+			who_plan = {experts_id[0]: None, experts_id[1]: True}
+			final_actions_prob = {experts_id[0]: None, experts_id[1]: 1}
+			self.norm_entropy = {experts_id[0]: None, experts_id[1]: norm_entropy[1]}
 		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
 
 
-	def random(self):
+	def random(self, experts_id):
 		"""
-		Choose the action between those proposed randomly
+		Determine which expert will plan randomly.
 		"""
 		# ---------------------------------------------------------------------------
 		#print(f"Decisions : {decisions}")
 		randval = np.random.rand()
 		if randval <= 0.500000000:
-			who_plan = {"MF": True, "MB": False, "DQN": False}
-			self.norm_entropy = {"MF": 0.0, "MB": 0.0, "DQN": 0.0}
+			who_plan = {experts_id[0]: True, experts_id[1]: False}
+			self.norm_entropy = {experts_id[0]: 0.0, experts_id[1]: 0.0}
 		elif randval > 0.50000000:
-			who_plan = {"MF": False, "MB": True, "DQN": 0.0}
-			self.norm_entropy = {"MF": 0.0, "MB": 0.0, "DQN": 0.0}
+			who_plan = {experts_id[0]: False, experts_id[1]: True}
+			self.norm_entropy = {experts_id[0]: 0.0, experts_id[1]: 0.0}
 		# ---------------------------------------------------------------------------
-		final_actions_prob = {"MF": 0.5, "MB": 0.5, "DQN": 0.0}
+		final_actions_prob = {experts_id[0]: 0.5, experts_id[1]: 0.5}
 		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
 
 
-	def decide(self, plan_time, selection_prob):
+	def decide(self, experts_id, plan_time, selection_prob):
 		"""
-		Choose the action between those proposed according to the choosen criteria
+		Determine which expert will plan based on the action selection probabilities
+		and the coordination criterion
 		"""
 		# ---------------------------------------------------------------------------
 		if self.criterion == "random": 
-			final_actions_prob, who_plan = self.random()
-		elif self.criterion == "MF_only":
-			final_actions_prob, who_plan = self.only_one(selection_prob, "MF") 
-		elif self.criterion == "MB_only":
-			final_actions_prob, who_plan = self.only_one(selection_prob, "MB")
-		elif self.criterion == "DQN_only":
-			final_actions_prob, who_plan = self.only_one(selection_prob, "DQN")
-		elif self.criterion == "Entropy_and_time":
-			final_actions_prob, who_plan = self.entropy_and_time(plan_time, selection_prob)
-		elif self.criterion == "Entropy_only":
-			final_actions_prob, who_plan = self.entropy_only(selection_prob)
+			final_actions_prob, who_plan = self.random(experts_id)
+		elif self.criterion == "no_coordination":
+			final_actions_prob, who_plan = self.no_coordination(experts_id, selection_prob) 
+		elif self.criterion == "entropy_and_cost":
+			final_actions_prob, who_plan = self.entropy_and_cost(experts_id, plan_time, selection_prob)
+		elif self.criterion == "entropy":
+			final_actions_prob, who_plan = self.entropy(experts_id, selection_prob)
 		else:
 			sys.exit("This criterion is unknown. Retry with a good one.")
 		# ---------------------------------------------------------------------------
@@ -265,53 +273,46 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 
 
-	def run(self, action_count, reward_obtained, current_state, plan_time, selection_prob):
+	def run(self, action_count, reward_obtained, current_state, experts_id, plan_time, selection_prob):
 		"""
-		Run the metacontroller
+		Run the meta-controller
 		"""
 		# ---------------------------------------------------------------------------
 		old_time = datetime.datetime.now()
 		# ---------------------------------------------------------------------------
 		print("------------------------ MC --------------------------------") 
-		print(f"Plan time : {plan_time}")
-		print(f"Probability of actions : {selection_prob}")
+		print(f"Plan time : {experts_id[0]} -> {plan_time[0]}, {experts_id[1]} -> {plan_time[1]}")
+		print(f"Probabilities of actions : {experts_id[0]} -> {selection_prob[0]}, {experts_id[1]} -> {selection_prob[1]}")
 		#print(f"Repartition of the prefered actions : {prefered_action}")
 		# ---------------------------------------------------------------------------
 		# Decide betwen the two experts accoring to the choosen criterion
-		final_actions_prob, who_plan = self.decide(plan_time, selection_prob)
+		final_actions_prob, who_plan = self.decide(experts_id, plan_time, selection_prob)
 		# ---------------------------------------------------------------------------
 		# Sum the duration of planification with a low pass filter
 		current_time = datetime.datetime.now()
 		new_plan_time = (current_time - old_time).total_seconds()
 		old_plan_time = get_duration(self.dict_duration, current_state)
-		filtered_time = low_pass_filter(0.6, old_plan_time, new_plan_time)
+		filtered_time = low_pass_filter(self.alpha, old_plan_time, new_plan_time)
 		set_duration(self.dict_duration, current_state, filtered_time)
 		# ---------------------------------------------------------------------------
 		# Register the winner
-		if who_plan["MF"] == True:
-			winner = "MF"
-		elif who_plan["MB"] == True:
-			winner = "MB"
-		elif who_plan["DQN"] == True:
-			winner = "DQN"
+		for key, value in who_plan.items():
+			if value == True:
+				winner = key
 		# ---------------------------------------------------------------------------
-		# Logs
+		# If logs are recorded 
 		if self.log == True:
 			# -----------------------------------------------------------------------
+			# Count cumulated time
 			time = 0.0
-			if who_plan["MF"] == True:
-				time += plan_time["MF"]
-			if who_plan["MB"] == True:
-				time += plan_time["MB"]
-			if who_plan["DQN"] == True:
-				time += plan_time["DQN"]
+			for key, value in who_plan.items():
+				if value == True:
+					time += plan_time[experts_id.index(key)]
 			# -----------------------------------------------------------------------
-			if who_plan["MF"] == True:
-				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} MF {final_actions_prob['MF']} {self.norm_entropy['MF']} {self.norm_entropy['MB']} {filtered_time}\n")
-			elif who_plan["MB"] == True:
-				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} MB {final_actions_prob['MB']} {self.norm_entropy['MF']} {self.norm_entropy['MB']} {filtered_time}\n")
-			elif who_plan["DQN"] == True:
-				self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} DQN {final_actions_prob['DQN']} {self.norm_entropy['DQN']} {self.norm_entropy['DQN']} {filtered_time}\n")
+			# Write log
+			for key, value in who_plan.items():
+				if value == True:
+					self.MC_log.write(f"{action_count} {current_state} {reward_obtained} {time} {key} {final_actions_prob[key]} {self.norm_entropy[experts_id[0]]} {self.norm_entropy[experts_id[1]]} {filtered_time}\n")
 		# ---------------------------------------------------------------------------
 		return winner, who_plan
 		# ---------------------------------------------------------------------------
