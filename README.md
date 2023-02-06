@@ -66,7 +66,7 @@ reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM
 * tensorflow 2.9
 * numpy
 
-## Example of commands to run the program
+## Examples of commands to run the program
 
 ```
 python agentSimulator.py 0 MF MB realisticNavWorld.json keyStates.txt spaces.txt parameters.txt -d 1600 -c entropy_and_cost
