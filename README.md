@@ -8,7 +8,7 @@ The main objective of my thesis was to create a meta-control algorithm that allo
 
 ## Script to simulate an agent evolving / acting in an environment containing a reward source
 
-* The *loadFiles.py* script allows to load some files requiered to run the simulation,
+* The *loadFiles.py* script allows to load some files required to run the simulation.
 * The *agentSimulator.py* script is the core of the program.
 
   It takes as input 7 mandatory ordered arguments :
@@ -41,12 +41,12 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   * ```Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.```
 
 * The *modelFreeRL.py* script allows the agent to use a Q-learning algorithm (model-free reinforcement learning) 
-to learn to solve the task,
+to learn to solve the task.
 * The *modelBasedRL.py* script allows the agent to use a Value-Iteration algorithm (model-based reinforcement learning) to learn to solve the task,
 * The *DQN.py* script allows the agent to use a Deep Q-Network algorithm (deep reinforcement learning) 
-to learn to solve the task,
+to learn to solve the task.
 * The *prioritizedSweeping.py* script allows the agent to use a Prioritized Sweeping algorithm (model-based
-reinforcement learning) to learn to solve the task,
+reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM AT THE MOMENT). 
 * The *metaControllerSystem.py* script allows the agent to coordinate the different behavioral strategies implemented in the four previous scripts,
 * The *utility.py* script contains some functions used by the other scripts.
 
