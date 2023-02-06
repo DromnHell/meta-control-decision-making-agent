@@ -88,6 +88,15 @@ This code will run the experiment 1, where an agent using only one expert (a DQN
 1599 0 0 9.462273008389549e-07 MF 0.9904485966915921 0.6847743322036773 0.6494277836137697 6.362911275139294e-05
 1600 0 0 9.784909203355819e-07 MF 0.9968824302693863 0.674786980876488 0.658064217038684 6.505164510055717e-05
 ```
+These data correspond to : 
 
-[iteration] [current state] [reward obtained] [time of planning] [the winner expert who controlled the robot] [probability of selection of the action that has been performed] [entropy of the distribution of action selection probabilities of the winner expert] [same metric for the looser expert] [cumulated filtered planning time]
+* the current iteration,
+* the current state where the agent is,
+* the potentially reward obtained by the agent,
+* the time of planning at this iteration,
+* the ID of the winner expert who controlled the robot at this iteration,
+* the probability of selection of the action that has been performed by the agent,
+* the entropy of the distribution of action selection probabilities of the winner expert,
+* the same metric for the looser expert,
+* the cumulated filtered planning time of the agent.
 
