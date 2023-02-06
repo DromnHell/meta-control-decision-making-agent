@@ -33,6 +33,7 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   Exceptions :
   * ```Error : 'expert' is not a known expert. The known experts are : ['MF', 'MB', 'DQN', 'None']``` if one of the experts (arguments 2 and 3) are unknown.
   * ```Error : 'criterion' is not a known criterion. The known criteria are : ["random", "entropy", "entropy_and_cost"]``` if the criterion (option -c) is unknown.
+  * ```Error : the two experts used by the agent must be different.``` if the two experts are the same.
   * ```Error : the agent need at least one expert to run.``` if the two experts (arguments 2 and 3) are both 'None'.
 
   Warning :
