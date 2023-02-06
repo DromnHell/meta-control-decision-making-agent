@@ -13,7 +13,7 @@ This script is the core of the program. It initializes the agent and run the sim
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -28,7 +28,7 @@ from metaControllerSystem import *
 from modelFreeRL import *
 from modelBasedRL import *
 from DQN import *
-from manageEnvironment import *
+from loadFiles import *
 # -----------------------------------------------------------------------------------
 
 KNOWN_EXPERTS = ["MF", "MB", "DQN", "None"]
@@ -36,13 +36,51 @@ KNOWN_CRITERIA = ["random", "entropy", "entropy_and_cost"]
 
 # -----------------------------------------------------------------------------------
 
-def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables):
+def update_robot_position(init_states, final_state, map_file, start, action):
 	"""
-	Run the simulation
+	Simulate the effect of the robot's decision on the environement, that is to say,
+	the identify of new state reaches after do the action in the previous state and 
+	the reward obtains in this new state.
 	"""
 	# -------------------------------------------------------------------------------
-	# Initialise the environment of the agent
-	key_states, switch_goal, add_wall = initialize_environment(key_states_file)
+	with open(map_file,'r') as file1:
+		# ---------------------------------------------------------------------------
+		arena = json.load(file1)
+		# If the previous state is the rewarded state, the current state
+		# is randomly choose in the list of initial states.
+		if start == final_state["state"]:
+			arrival = np.random.choice(init_states)
+		# ---------------------------------------------------------------------------
+		# Else, the current state is choose according to the map of the
+		# environement
+		else :
+			tab_act = list()
+			for state in arena["transitionActions"]:
+				if str(state["state"]) == start:
+					for transition in state["transitions"]:
+						if transition["action"] == action:
+							l = [str(transition["state"])]
+							l = l*transition["prob"]
+							tab_act.extend(l)
+			arrival = np.random.choice(tab_act)
+		# ---------------------------------------------------------------------------
+		# If the arrival state is the rewarded state, reward = 1
+		if arrival == final_state["state"]:
+			reward = final_state["reward"]
+		else:
+			reward = 0
+		# ---------------------------------------------------------------------------
+	return reward, arrival
+	# -------------------------------------------------------------------------------
+
+
+def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables):
+	"""
+	Run the simulation.
+	"""
+	# -------------------------------------------------------------------------------
+	# Initialise the key states of the agent's
+	key_states, switch_goal, add_wall = load_key_states(key_states_file)
 	final_state = {"state": key_states["goal"], "reward": key_states["reward"]}
 	init_states = key_states["init_states"]
 	# -------------------------------------------------------------------------------
@@ -163,38 +201,13 @@ def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries
 		#	final_decision = 0
 		#	current_state = "0"
 		#	who_plan[current_state] = {experts_id[0]: True, experts_id[1]: True}
-		#	meta_controller_system = MetaController(experiment, map_file, initial_variables, boundaries_exp, beta_MC, criterion, coeff_kappa, log)
+		#	meta_controller_system = MetaController(experiment, map_file, initial_variables, boundaries_exp, parameters_MC, criterion, coeff_kappa, log)
 		# ---------------------------------------------------------------------------
-
-
-def parse_parameters(parameters_file):
-	"""
-	Parse the file that contains the parameters
-	"""
-	# -------------------------------------------------------------------------------
-	with open(parameters_file,'r') as file1:
-		for line in file1:
-			if line.split(" ")[0] == "MF":
-				alpha_MF = float(line.split(" ")[1])
-				gamma_MF = float(line.split(" ")[2])
-				beta_MF = int(line.split(" ")[3])
-			elif line.split(" ")[0] == "MB":
-				gamma_MB = float(line.split(" ")[1])
-				beta_MB = int(line.split(" ")[2])
-			elif line.split(" ")[0] == "MC":
-				beta_MC = int(line.split(" ")[1])
-	# -------------------------------------------------------------------------------
-	parameters_MF = {"alpha": alpha_MF, "gamma": gamma_MF, "beta": beta_MF}
-	parameters_MB = {"alpha": alpha_MF, "gamma": gamma_MB, "beta": beta_MB}
-	parameters_DQN = {"alpha": alpha_MF, "gamma": gamma_MB, "beta": beta_MB}
-	# -------------------------------------------------------------------------------
-	return parameters_MF, parameters_MB, parameters_DQN, beta_MC
-	# -------------------------------------------------------------------------------
-
+		
 
 def manage_arguments():
 	"""
-	Manage the arguments of the script
+	Manage the arguments of the script.
 	"""
 	# -------------------------------------------------------------------------------
 	usage = "usage: agentSimulator.py [options] [the id of the experiment] [the id of the first expert] [the id of the second expert] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
@@ -225,7 +238,7 @@ def manage_arguments():
 		spaces_file = sys.argv[6]
 		parameters_file = sys.argv[7]
 	# -------------------------------------------------------------------------------
-	print("\n")
+	# ERRORS
 	error = False
 	# Check if expert_1 exists. If not, quit the program.
 	try:
@@ -245,14 +258,22 @@ def manage_arguments():
 	except ValueError:
 		print(f"Error : '{options.criterion}' is not a known criterion. The known criteria are : {KNOWN_CRITERIA}")
 		error = True
+	# Check if the two experts are the same. If true, quit the program.
+	if expert_1 == expert_2:
+		print(f"Error : the two experts used by the agent must be different.")
+		error = True
 	# Check if at least one expert is defined. If not, quit the program.
 	if expert_1 == expert_2 == "None":
 		print(f"Error : the agent need at least one expert to run.")
 		error = True
+	# -------------------------------------------------------------------------------
+	# WARNING
 	# If only one expert is used, notify that the  critertion of coordination will be not used
 	elif expert_1 == "None" or expert_2 == "None":
 		print(f"Warning : with only one expert, the criterion of coordination will not be used, because there will be no expert to coordinate.")
-		options.criterion = "only_one"
+		options.criterion = "no_coordination"
+	# -------------------------------------------------------------------------------
+	print("\n")
 	# -------------------------------------------------------------------------------
 	if error == True:
 		quit()
@@ -265,7 +286,7 @@ if __name__ == "__main__":
 	# -------------------------------------------------------------------------------
 	# Manage the arguments et parse the parameters
 	experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options = manage_arguments()
-	parameters_MF, parameters_MB, parameters_DQN, beta_MC = parse_parameters(parameters_file)
+	parameters_MF, parameters_MB, parameters_DQN, parameters_MC = load_parameters(parameters_file, expert_1, expert_2)
 	# -------------------------------------------------------------------------------
 	# Initialize and regroup the variables and the constants
 	experts = (expert_1, expert_2)
@@ -279,7 +300,7 @@ if __name__ == "__main__":
 	"qvalue": 1, "delta": 0.0, "plan_time": 0.0, "reward": 0}
 	# -------------------------------------------------------------------------------
 	# Create instances for the systems used by the virtual agent
-	meta_controller = MetaController(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, beta_MC, experts, criterion, coeff_kappa, log)
+	meta_controller = MetaController(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log)
 	experts_to_run = list()
 	for expert in experts:
 		if expert == "MF":

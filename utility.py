@@ -18,7 +18,7 @@ get_* = collect a value in a data structure
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"

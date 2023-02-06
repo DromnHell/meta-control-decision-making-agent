@@ -14,7 +14,7 @@ behavioral strategies.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Production"
@@ -24,10 +24,10 @@ from utility import *
 class MetaController:
 	"""
 	This class implements a meta-controller tha allows the agent to choose which expert 
-	will be allowed to schedule the next time.
+	will be allowed to schedule at the next iteration.
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, beta_MC, experts, criterion, coeff_kappa, log):
+	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log):
 		"""
 		Iinitialise values and models
 		"""
@@ -38,7 +38,8 @@ class MetaController:
 		initial_reward = initial_variables["reward"]
 		initial_duration = initial_variables["plan_time"]
 		self.action_space = action_space
-		self.beta_MC = beta_MC
+		self.beta_MC = parameters_MC["beta"]
+		self.alpha = parameters_MC["alpha"]
 		self.criterion = criterion
 		self.coeff_kappa = coeff_kappa
 		self.log = log["log"]
@@ -195,10 +196,10 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 
 
-	def only_one(self, experts_id, selection_prob):
+	def no_coordination(self, experts_id, selection_prob):
 		"""
-		The agent used only one expert, so only one expert can plan. But we need this
-		function to recorde the entropie values anyway.
+		The agent used only one expert, so there is no coordination and only one expert can plan.
+		But we need this function to recorde the entropie values anyway.
 		"""
 		# ---------------------------------------------------------------------------
 		entropy_probs = list()
@@ -259,8 +260,8 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 		if self.criterion == "random": 
 			final_actions_prob, who_plan = self.random(experts_id)
-		elif self.criterion == "only_one":
-			final_actions_prob, who_plan = self.only_one(experts_id, selection_prob) 
+		elif self.criterion == "no_coordination":
+			final_actions_prob, who_plan = self.no_coordination(experts_id, selection_prob) 
 		elif self.criterion == "entropy_and_cost":
 			final_actions_prob, who_plan = self.entropy_and_cost(experts_id, plan_time, selection_prob)
 		elif self.criterion == "entropy":
@@ -291,7 +292,7 @@ class MetaController:
 		current_time = datetime.datetime.now()
 		new_plan_time = (current_time - old_time).total_seconds()
 		old_plan_time = get_duration(self.dict_duration, current_state)
-		filtered_time = low_pass_filter(0.6, old_plan_time, new_plan_time)
+		filtered_time = low_pass_filter(self.alpha, old_plan_time, new_plan_time)
 		set_duration(self.dict_duration, current_state, filtered_time)
 		# ---------------------------------------------------------------------------
 		# Register the winner
@@ -303,9 +304,6 @@ class MetaController:
 		if self.log == True:
 			# -----------------------------------------------------------------------
 			# Count cumulated time
-			print(experts_id)
-			print(plan_time)
-			print(who_plan)
 			time = 0.0
 			for key, value in who_plan.items():
 				if value == True:
