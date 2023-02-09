@@ -36,23 +36,22 @@ KNOWN_CRITERIA = ["random", "entropy", "entropy_and_cost"]
 
 # -----------------------------------------------------------------------------------
 
-def update_robot_position(init_states, final_state, map_file, start, action):
+def update_robot_position(init_states, final_state, env_file, start, action):
 	"""
-	Simulate the effect of the robot's decision on the environement, that is to say,
+	Simulate the effect of the robot's decision on the environment, that is to say,
 	the identify of new state reaches after do the action in the previous state and 
 	the reward obtains in this new state.
 	"""
 	# -------------------------------------------------------------------------------
-	with open(map_file,'r') as file1:
+	with open(env_file,'r') as file1:
 		# ---------------------------------------------------------------------------
 		arena = json.load(file1)
 		# If the previous state is the rewarded state, the current state
-		# is randomly choose in the list of initial states.
+		# is randomly choose in the list of the initial states.
 		if start == final_state["state"]:
 			arrival = np.random.choice(init_states)
 		# ---------------------------------------------------------------------------
-		# Else, the current state is choose according to the map of the
-		# environement
+		# Else, the current state is choose according to the environment.
 		else :
 			tab_act = list()
 			for state in arena["transitionActions"]:
@@ -74,12 +73,12 @@ def update_robot_position(init_states, final_state, map_file, start, action):
 	# -------------------------------------------------------------------------------
 
 
-def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables):
+def run_simulation(env_file, meta_controller, experts_to_run, boundaries_exp, changes_exp, initial_variables):
 	"""
 	Run the simulation.
 	"""
 	# -------------------------------------------------------------------------------
-	# Initialise the key states of the agent's
+	# initialize the key states of the agent's
 	key_states, switch_goal, add_wall = load_key_states(key_states_file)
 	final_state = {"state": key_states["goal"], "reward": key_states["reward"]}
 	init_states = key_states["init_states"]
@@ -121,17 +120,17 @@ def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries
 		# Update potentially the environment
 		if changes_exp["new_goal"] == True and action_count == switch_goal["iteration"]:
 			final_state = {"state": switch_goal["new_goal"], "reward": switch_goal["reward"]}
-			map_file = map_file+"_afterSwitch"
+			env_file = env_file+"_afterSwitch"
 			print(f"The rewarded state has changed ! Now the state {final_state['state']} gives the reward.")
 		if changes_exp["add_wall"] == True and action_count == add_wall["iteration"]:
 			if path1 >= path2:
-				map_file = f"{map_file}_wall{add_wall['path1']}"
+				env_file = f"{env_file}_wall{add_wall['path1']}"
 				print(f"A wall has been added between the states {add_wall['path1']}")
 			else:
-				map_file = f"{map_file}_wall{add_wall['path2']}"
+				env_file = f"{env_file}_wall{add_wall['path2']}"
 				print(f"A wall has been added between the states {add_wall['path2']}")
 		# ---------------------------------------------------------------------------
-		# Get the probabilities of selection of the experts for the current state accoring to the q-values
+		# Get the probabilities of selection of the experts for the current state accoring to the qvalues
 		selection_prob = list()
 		for expert in experts_to_run:
 			if expert != None:
@@ -177,10 +176,12 @@ def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries
 		elif previous_state == "19":
 			path1 += 1
 		# ---------------------------------------------------------------------------
-		# Simulate the effect of the robot's final decision on the environement and find the new current state
-		reward_obtained, current_state = update_robot_position(init_states, final_state, map_file, previous_state, final_decision)
+		#if current_state == "18" and cumulated_reward == 3:
+			#quit()
+		# Simulate the effect of the robot's final decision on the environment and find the new current state
+		reward_obtained, current_state = update_robot_position(init_states, final_state, env_file, previous_state, final_decision)
 		# ---------------------------------------------------------------------------
-		# Reset the reward obtained if the map changes
+		# Reset the reward obtained if the environment changes
 		if action_count == switch_goal["iteration"] or action_count == add_wall["iteration"]:
 			reward_obtained = 0
 		# ---------------------------------------------------------------------------
@@ -201,7 +202,7 @@ def run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries
 		#	final_decision = 0
 		#	current_state = "0"
 		#	who_plan[current_state] = {experts_id[0]: True, experts_id[1]: True}
-		#	meta_controller_system = MetaController(experiment, map_file, initial_variables, boundaries_exp, parameters_MC, criterion, coeff_kappa, log)
+		#	meta_controller_system = MetaController(experiment, env_file, initial_variables, boundaries_exp, parameters_MC, criterion, coeff_kappa, log)
 		# ---------------------------------------------------------------------------
 		
 
@@ -210,7 +211,7 @@ def manage_arguments():
 	Manage the arguments of the script.
 	"""
 	# -------------------------------------------------------------------------------
-	usage = "usage: agentSimulator.py [options] [the id of the experiment] [the id of the first expert] [the id of the second expert] [the file that contains the map of the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
+	usage = "usage: agentSimulator.py [options] [the id of the experiment] [the id of the first expert] [the id of the second expert] [the file that contains the environment, in the form of a transition model] [the file that contains the key states] [the file that contains the states and the actions spaces] [the file that contains the parameters of each expert]"
 	parser = OptionParser(usage)
 	# -------------------------------------------------------------------------------
 	# OPTIONS
@@ -233,7 +234,7 @@ def manage_arguments():
 		experiment = sys.argv[1]
 		expert_1 = sys.argv[2]
 		expert_2 = sys.argv[3]
-		map_file = sys.argv[4]
+		env_file = sys.argv[4]
 		key_states_file = sys.argv[5]
 		spaces_file = sys.argv[6]
 		parameters_file = sys.argv[7]
@@ -278,14 +279,14 @@ def manage_arguments():
 	if error == True:
 		quit()
 	else:
-		return(experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options)
+		return(experiment, expert_1, expert_2, env_file, key_states_file, spaces_file, parameters_file, options)
 	# -------------------------------------------------------------------------------
 
 
 if __name__ == "__main__":                          
 	# -------------------------------------------------------------------------------
 	# Manage the arguments et parse the parameters
-	experiment, expert_1, expert_2, map_file, key_states_file, spaces_file, parameters_file, options = manage_arguments()
+	experiment, expert_1, expert_2, env_file, key_states_file, spaces_file, parameters_file, options = manage_arguments()
 	parameters_MF, parameters_MB, parameters_DQN, parameters_MC = load_parameters(parameters_file, expert_1, expert_2)
 	# -------------------------------------------------------------------------------
 	# Initialize and regroup the variables and the constants
@@ -300,24 +301,24 @@ if __name__ == "__main__":
 	"qvalue": 1, "delta": 0.0, "plan_time": 0.0, "reward": 0}
 	# -------------------------------------------------------------------------------
 	# Create instances for the systems used by the virtual agent
-	meta_controller = MetaController(experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log)
+	meta_controller = MetaController(experiment, env_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log)
 	experts_to_run = list()
 	for expert in experts:
 		if expert == "MF":
-			new_expert = ModelFree(expert, experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MF, log)
+			new_expert = ModelFree(expert, experiment, env_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MF, log)
 			experts_to_run.append(new_expert)
 		elif expert == "MB":
-			new_expert = ModelBased(expert, experiment, map_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MB, log)
+			new_expert = ModelBased(expert, experiment, env_file, initial_variables, spaces["actions"], boundaries_exp, parameters_MB, log)
 			experts_to_run.append(new_expert)
 		elif expert == "DQN":
-			new_expert = DQN(expert, experiment, map_file, initial_variables, spaces, boundaries_exp, parameters_DQN, log)
+			new_expert = DQN(expert, experiment, env_file, initial_variables, spaces, boundaries_exp, parameters_DQN, log)
 			experts_to_run.append(new_expert)
 		elif expert == "None":
 			new_expert = None
 			experts_to_run.append(new_expert)
 	# -------------------------------------------------------------------------------
 	# Run the simulation
-	run_simulation(map_file, meta_controller, experts_to_run, spaces, boundaries_exp, changes_exp, initial_variables)
+	run_simulation(env_file, meta_controller, experts_to_run, boundaries_exp, changes_exp, initial_variables)
 	# -------------------------------------------------------------------------------
 	
 

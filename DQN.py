@@ -14,10 +14,10 @@ to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "2.0"
+__version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
-__status__ = "Production"
+__status__ = "Devlopment"
 
 from utility import *
 
@@ -25,15 +25,15 @@ VERSION = 1
 
 class DQN:
 	"""
-	This class implements a model-free deed reinforcement learning algorithm (Deep Q-Network).
+	This class implements a deep model-free reinforcement learning algorithm (Deep Q-Network).
     """
 
-	def __init__(self, expert, experiment, map_file, initial_variables, spaces, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, env_file, initial_variables, spaces, boundaries_exp, parameters, log):
 		"""
-		Iinitialise values and models
+		Iinitialize values and models
 		"""
 		# ---------------------------------------------------------------------------
-		# Initialise all the variables which will be used
+		# initialize all the variables which will be used
 		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
@@ -48,14 +48,9 @@ class DQN:
 		self.beta_decay = 1.005
 		self.log = log["log"]
 		self.summary = log["summary"]
+		self.rewarded_state = None
 		action_count = initial_variables["action_count"]
-		decided_action = initial_variables["decided_action"]
-		previous_state = initial_variables["previous_state"]
-		current_state = initial_variables["current_state"]
 		self.init_qvalue = initial_variables["qvalue"]
-		init_reward = initial_variables["reward"]
-		init_delta = initial_variables["delta"]
-		init_plan_time = initial_variables["plan_time"]
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
 		self.action_space = spaces["actions"]
@@ -98,60 +93,25 @@ class DQN:
 		self.dict_duration["actioncount"] = action_count
 		self.dict_duration["values"] = list()
 		# ---------------------------------------------------------------------------
-		# Load the transition model which will be used as map
-		with open(map_file,'r') as file2:
-			self.map = json.load(file2)
-		# For each state of the map : 
-		for state in self.map["transitionActions"]:
+		# Load the transition model which will be used as the environment representation
+		with open(env_file,'r') as file2:
+			self.env = json.load(file2)
+		# For each state of the environment : 
+		for state in self.env["transitionActions"]:
 			s = str(state["state"])
 			t = state["transitions"]
 			# -----------------------------------------------------------------------
 			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*self.action_space
 			self.dict_qvalues[(s,"visits")] = 0
 			# -----------------------------------------------------------------------
-			# - initialise the "probabilties of actions" dict
+			# - initialize the "probabilties of actions" dict
 			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*self.action_space, "filtered_prob": [init_actions_prob]*self.action_space})
 			# -----------------------------------------------------------------------
-			# - initialise the "identity of the selected action" dict
+			# - initialize the "identity of the selected action" dict
 			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*self.window_size]*self.action_space})
 			# -----------------------------------------------------------------------
-			# - initialise the duration dict
+			# - initialize the duration dict
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
-		# ---------------------------------------------------------------------------
-		# Initialise logs
-		# self.directory_flag = False
-		# if not os.path.exists("logs"):
-		# 	os.mkdir("logs") 
-		# os.chdir("logs")
-		# if not os.path.exists("DQN"):
-		# 	os.mkdir("DQN") 
-		# os.chdir("DQN")
-		# if self.log == True:
-		# 	directory = "exp"+str(self.experiment)+"_alpha"+str(self.alpha)+"_gamma"+str(self.gamma)+"_beta"+str(self.beta)
-		# 	if not os.path.exists(directory):
-		# 		os.makedirs(directory)
-		# 	os.chdir(directory)
-		# 	self.directory_flag = True
-		# 	# -----------------------------------------------------------------------
-		# 	prefixe = "v"+str(VERSION)+"_TBDQN_exp"+str(self.experiment)+"_"
-		# 	# -----------------------------------------------------------------------
-		# 	self.reward_log = open(prefixe+'reward_log.dat', 'w')
-		# 	self.reward_log.write("timecount"+" "+str(action_count)+" "+str(init_reward)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	# -----------------------------------------------------------------------
-		# 	self.states_evolution_log = open(prefixe+'statesEvolution_log.dat', 'w')
-		# 	self.states_evolution_log.write("timecount"+" "+str(action_count)+" "+current_state+" "+previous_state+ \
-		# 		" currentContactState"+" currentViewState"+" "+str(decided_action)+" currentTime-nodeStartTime"+" currentTime"+"\n")
-		# 	# -----------------------------------------------------------------------
-		# 	#self.qvalues_evolution_log = open(prefixe+'qvaluesEvolution_log.dat', 'w')
-		# 	#self.qvalues_evolution_log.write('{\n"logs" :\n['+json.dumps(self.dict_qvalues))
-		# 	# -----------------------------------------------------------------------
-		# 	self.actions_evolution_log = open(prefixe+'actions_evolution_log.dat', 'w')
-		# 	self.actions_evolution_log.write('{\n"logs" :\n['+json.dumps(self.dict_actions_prob))
-		# 	# -----------------------------------------------------------------------
-		# 	self.monitoring_values_log = open(prefixe+'monitoring_values_log.dat', 'w')
-		# 	self.monitoring_values_log.write(str(action_count)+" "+str(init_plan_time)+" "+str(abs(init_delta))+" "+str(init_delta)+" "+str(init_delta)+"\n")
-		# # ---------------------------------------------------------------------------
-		# os.chdir("../../../")
 		# ---------------------------------------------------------------------------
 
 
@@ -215,7 +175,7 @@ class DQN:
 		#actions_prob = {"0": 0.125, "1": 0.125, "2": 0.125, "3": 0.125, "4": 0.125, "5": 0.125, "6": 0.125, "7": 0.125}
 		actions_prob = softmax_actions_prob(qvals, self.beta)
 		new_probs = list()
-		for action, prob in actions_prob.items():
+		for prob in actions_prob.values():
 			new_probs.append(prob)
 		set_actions_prob(self.dict_actions_prob, current_state, new_probs)
 		# ---------------------------------------------------------------------------
@@ -230,7 +190,7 @@ class DQN:
 		#choosen_action = rargmax(qvalues)
 		decision, choosen_action = softmax_decision(actions_prob, actions)
 		# ----------------------------------------------------------------------------
-		return choosen_action, actions_prob
+		return choosen_action
 		# ----------------------------------------------------------------------------
 
 	def infer(self, current_state):
@@ -255,7 +215,7 @@ class DQN:
 		# Get current stats from minibath
 		previous_states = np.array([transition[0] for transition in minibatch])
 		current_states = np.array([transition[3] for transition in minibatch])
-		# Query neural network model for q-values
+		# Query neural network model for qvalues
 		qvalues_previous_states = self.model.predict(previous_states)
 		qvalues_current_states = self.target_model.predict(current_states)
 		# ----------------------------------------------------------------------------
@@ -345,7 +305,21 @@ class DQN:
 		self.dict_actions_prob["actioncount"] = action_count
 		self.dict_qvalues[(str(current_state),"actioncount")] = action_count
 		self.dict_qvalues[(str(previous_state),"visits")] += 1
-		# ----------------------------------------------------------------------------
+		# ---------------------------------------------------------------------------
+		# The qvalues of the rewarded state have to be null. So set them to 0 the
+		# first time the rewarded state is met
+		if reward_obtained == 1 and cumulated_reward == 1:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+		# ---------------------------------------------------------------------------
+		# If the previous state is the reward state, the agent must not run its
+		# learning process
+		if previous_state == self.rewarded_state:
+			self.not_learn = True
+		else:
+			self.not_learn = False
+		# ---------------------------------------------------------------------------
 		# Update the input vectors for the DQN
 		self.input_ps = np.array([0]*self.state_space)
 		self.input_ps[int(previous_state)] = 1
@@ -383,7 +357,7 @@ class DQN:
 		else:
 			qvalues = self.dict_qvalues[(str(current_state),"qvals")]
 			# ------------------------------------------------------------------------
-		decided_action, actions_prob = self.decide(current_state, qvalues)
+		decided_action = self.decide(current_state, qvalues)
 		# ----------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
@@ -392,17 +366,6 @@ class DQN:
 			for dictStateValues in self.dict_decision["values"]:
 				if dictStateValues["state"] == current_state:
 					prefered_action[action] = sum(dictStateValues["history_decisions"][action])
-		# ----------------------------------------------------------------------------
-		# Prepare data to return 
-		plan_time = get_duration(self.dict_duration, current_state)
-		selection_prob = get_filtered_prob(self.dict_actions_prob, current_state)
-		# ----------------------------------------------------------------------------
-		if reward_obtained > 0.0:
-			self.not_learn = True
-			for a in range(0,self.action_space):
-				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
-		else:
-			self.not_learn = False
 		# ---------------------------------------------------------------------------
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
 			# Build the summary file 

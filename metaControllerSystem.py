@@ -27,9 +27,9 @@ class MetaController:
 	will be allowed to schedule at the next iteration.
     """
 
-	def __init__(self, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log):
+	def __init__(self, experiment, env_file, initial_variables, action_space, boundaries_exp, parameters_MC, experts, criterion, coeff_kappa, log):
 		"""
-		Iinitialise values and models
+		Iinitialize values and models
 		"""
 		# ---------------------------------------------------------------------------
 		self.experiment = experiment
@@ -48,14 +48,14 @@ class MetaController:
 		self.dict_duration = dict()
 		self.dict_duration["actioncount"] = action_count
 		self.dict_duration["values"] = list()
-		# initialise the duration dict
-		with open(map_file,'r') as file2:
-			self.map = json.load(file2)
-		for state in self.map["transitionActions"]:
+		# initialize the duration dict
+		with open(env_file,'r') as file2:
+			self.env = json.load(file2)
+		for state in self.env["transitionActions"]:
 			s = str(state["state"]).replace(" ", "")
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
 		# ---------------------------------------------------------------------------
-		# Initialise logs
+		# initialize logs
 		self.directory_flag = False
 		try:
 			os.stat("logs")
