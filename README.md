@@ -26,8 +26,8 @@ The main objective of my thesis was to create a meta-control algorithm that allo
   * (-r) the amount of reward expected before the simulation stops,
   * (-d) the maximum duration of the simulation,
   * (-w) the window size of the filtering,
-  * (-n) the indication of an upcoming goal change in the environment,
-  * (-a) the indication of an upcoming transitions change in the environment,
+  * (-g) the indication of an upcoming goal change in the environment,
+  * (-t) the indication of an upcoming transitions change in the environment,
   * (-l) the record of the data,
   * (-s) the record of a compressed version of the data.
   
