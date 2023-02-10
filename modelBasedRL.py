@@ -52,6 +52,7 @@ class ModelBased:
 		self.action_space = action_space
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
+		self.wait_new_goal = True
 		# ----------------------------------------------------------------------------
 		# // List and dicts for store data //
 		# Create the list of states
@@ -237,7 +238,7 @@ class ModelBased:
 
 	def update_reward(self, current_state, reward_obtained):
 		"""
-		Update the the rewards model
+		Update the the rewards model.
 		"""
 		# ----------------------------------------------------------------------------
 		#expected_reward = reward_obtained
@@ -260,7 +261,7 @@ class ModelBased:
 
 	def update_prob(self, previous_state, action):
 		"""
-		Update the the transitions model
+		Update the the transitions model.
 		"""
 		# ----------------------------------------------------------------------------
 		delta_prob = 0.0 
@@ -370,7 +371,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 
 
-	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan): 
+	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan, new_goal): 
 		"""
 		Run the model-based RL expert
 		"""
@@ -389,6 +390,13 @@ class ModelBased:
 			self.rewarded_state = current_state
 			for a in range(0,self.action_space):
 				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+		# ---------------------------------------------------------------------------
+		# Same with the new rewarded state after the environmental change
+		if reward_obtained == 1 and new_goal == self.wait_new_goal == True:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+			self.wait_new_goal = False
 		# ---------------------------------------------------------------------------
 		# If the previous state is the reward state, the agent must not run its
 		# learning process

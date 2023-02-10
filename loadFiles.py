@@ -37,19 +37,19 @@ def load_key_states(key_states_file):
 				goal = str(line.split(" ")[1])
 				win_reward = int(line.split(" ")[2])
 			elif line.split(" ")[0] == "new_goal":
-				iteration_switch = int(line.split(" ")[1])
+				it_goal = int(line.split(" ")[1])
 				new_goal = str(line.split(" ")[2])
 				win_reward = int(line.split(" ")[3])
-			elif line.split(" ")[0] == "new_wall":
-				iteration_add = int(line.split(" ")[1])
+			elif line.split(" ")[0] == "del_trans":
+				it_trans = int(line.split(" ")[1])
 				path1 = str(line.split(" ")[2])
 				path2 = str(line.split(" ")[3])
 	# -------------------------------------------------------------------------------
 	key_states = {"init_states": init_str, "goal": goal, "reward": win_reward}
-	switch_goal = {"iteration": iteration_switch, "new_goal": new_goal, "reward": win_reward}
-	add_wall = {"iteration": iteration_add, "path1": path1, "path2": path2}
+	switch_goal = {"iteration": it_goal, "new_goal": new_goal, "reward": win_reward}
+	del_trans = {"iteration": it_trans, "path1": path1, "path2": path2}
 	# -------------------------------------------------------------------------------
-	return key_states, switch_goal, add_wall
+	return key_states, switch_goal, del_trans
 	# -------------------------------------------------------------------------------
 
 def load_spaces(spaces_file):

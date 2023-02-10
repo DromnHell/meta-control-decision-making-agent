@@ -53,6 +53,7 @@ class DQN:
 		self.init_qvalue = initial_variables["qvalue"]
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
+		self.wait_new_goal = True
 		self.action_space = spaces["actions"]
 		self.state_space = spaces["states"]
 		# ---------------------------------------------------------------------------
@@ -293,7 +294,7 @@ class DQN:
 		self.replay_memory.append((input_ps, decided_action, reward_obtained, input_cs))
 		# ----------------------------------------------------------------------------
 
-	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan): 
+	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan, new_goal): 
 		"""
 		Run the model-free Deep RL expert
 		"""
@@ -312,6 +313,13 @@ class DQN:
 			self.rewarded_state = current_state
 			for a in range(0,self.action_space):
 				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+		# ---------------------------------------------------------------------------
+		# Same with the new rewarded state after the environmental change
+		if reward_obtained == 1 and new_goal == self.wait_new_goal == True:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+			self.wait_new_goal = False
 		# ---------------------------------------------------------------------------
 		# If the previous state is the reward state, the agent must not run its
 		# learning process
