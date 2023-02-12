@@ -390,6 +390,9 @@ def low_pass_filter(alpha, old_value, new_value):
 
 # ---------------------------------------------------------------------------
 def shanon_entropy(source_vector):
+	"""
+	Compute the entropy of a vector
+	"""
 	entropy = 0
 	for element in source_vector:
 		if element == 0:

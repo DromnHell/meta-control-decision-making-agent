@@ -21,19 +21,19 @@ __status__ = "Production"
 
 from utility import *
 
-VERSION = 1
+VERSION = 2
 
 class ModelFree:
 	"""
-	This class implements a model-free reinforcement learning algorithm (Q-learning).
+	This class implements a tabular model-free reinforcement learning algorithm (Q-learning).
     """
 
-	def __init__(self, expert, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, env_file, initial_variables, action_space, boundaries_exp, parameters, log):
 		"""
-		Iinitialise values and models
+		Initialize values and models.
 		"""
 		# ---------------------------------------------------------------------------
-		# Initialise all the variables which will be used
+		# Initialize all the variables which will be used
 		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
@@ -44,19 +44,15 @@ class ModelFree:
 		self.beta = parameters["beta"]
 		self.log = log["log"]
 		self.summary = log["summary"]
+		self.rewarded_state = None
 		action_count = initial_variables["action_count"]
-		decided_action = initial_variables["decided_action"]
-		previous_state = initial_variables["previous_state"]
-		current_state = initial_variables["current_state"]
 		self.init_qvalue = initial_variables["qvalue"]
-		init_reward = initial_variables["reward"]
-		init_delta = initial_variables["delta"]
-		init_plan_time = initial_variables["plan_time"]
 		self.action_space = action_space
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
+		self.wait_new_goal = True
 		# ---------------------------------------------------------------------------
-		# // List and dicts for store data //
+		# // List and dicts to store data //
 		# Create a dict that contains the qvalues of the expert
 		self.dict_qvalues = dict()
 		# Create a dict that contains the probability of actions for each states
@@ -72,31 +68,31 @@ class ModelFree:
 		self.dict_duration["actioncount"] = action_count
 		self.dict_duration["values"] = list()
 		# ---------------------------------------------------------------------------
-		# Load the transition model which will be used as map
-		with open(map_file,'r') as file2:
-			self.map = json.load(file2)
-		# For each state of the map : 
-		for state in self.map["transitionActions"]:
+		# Load the transition model which will be used as the environment representation
+		with open(env_file,'r') as file2:
+			self.env = json.load(file2)
+		# For each state of the environment : 
+		for state in self.env["transitionActions"]:
 			s = str(state["state"])
 			t = state["transitions"]
 			# -----------------------------------------------------------------------
 			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*self.action_space
 			self.dict_qvalues[(s,"visits")] = 0
 			# -----------------------------------------------------------------------
-			# - initialise the "probabilties of actions" dict
+			# - initialize the "probabilties of actions" dict
 			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*self.action_space, "filtered_prob": [init_actions_prob]*self.action_space})
 			# -----------------------------------------------------------------------
-			# - initialise the "identity of the selected action" dict
+			# - initialize the "identity of the selected action" dict
 			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*self.window_size]*self.action_space})
 			# -----------------------------------------------------------------------
-			# - initialise the duration dict
+			# - initialize the duration dict
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
 		# ---------------------------------------------------------------------------
 
 
 	def get_actions_prob(self, current_state):
 		"""
-		Get the probabilities of actions of the current state
+		Get the probabilities of actions of the current state.
 		"""
 		# ----------------------------------------------------------------------------
 		return get_filtered_prob(self.dict_actions_prob, current_state)
@@ -104,7 +100,7 @@ class ModelFree:
 
 	def get_plan_time(self, current_state):
 		"""
-		Get the time of planification for the current state
+		Get the time of planification for the current state.
 		"""
 		# ----------------------------------------------------------------------------
 		return get_duration(self.dict_duration, current_state)
@@ -113,7 +109,7 @@ class ModelFree:
 
 	def decide(self, current_state, qvalues):
 		"""
-		Choose the next action using soft-max policy
+		Choose the next action using a soft-max policy.
 		"""
 		# ----------------------------------------------------------------------------
 		actions = dict()
@@ -126,11 +122,11 @@ class ModelFree:
 		# Soft-max function
 		actions_prob = softmax_actions_prob(qvals, self.beta)
 		new_probs = list()
-		for action, prob in actions_prob.items():
+		for prob in actions_prob.values():
 			new_probs.append(prob)
 		set_actions_prob(self.dict_actions_prob, current_state, new_probs)
 		# -------------------------------------------------------------------------
-		# For each action, sum the probabilitie of selection with a low pass filter
+		# For each action, sum the probabilities of selection with a low pass filter
 		old_probs = get_filtered_prob(self.dict_actions_prob, current_state)
 		filtered_actions_prob = list()
 		for a in range(0,len(new_probs)):
@@ -140,13 +136,13 @@ class ModelFree:
 		# The end of the soft-max function
 		decision, choosen_action = softmax_decision(actions_prob, actions)
 		# ---------------------------------------------------------------------------
-		return choosen_action, actions_prob
+		return choosen_action
 		# ----------------------------------------------------------------------------
 
 	def infer(self, current_state):
 		"""
-		In the MF expert, the process of inference consists to read the q-values table.
-		(this process is useless. It's to be symetric with MB expert)
+		In the MF expert, the process of inference consists to read the qvalues table.
+		(this function is useless. It's only to be symetric with MB expert).
 		"""
 		# ----------------------------------------------------------------------------
 		return self.dict_qvalues[(str(current_state),"qvals")]
@@ -155,15 +151,19 @@ class ModelFree:
 
 	def learn(self, previous_state, action, current_state, reward_obtained):
 		"""
-		Update q-values using Q-learning
+		Update qvalues using Q-learning.
 		"""
 		# ---------------------------------------------------------------------------
-		# Compute the deltaQ to send at the MC (criterion for the trade-off)
 		qvalue_previous_state = self.dict_qvalues[str(previous_state),"qvals"][int(action)]
 		qvalues_current_state = self.dict_qvalues[str(current_state),"qvals"]
 		max_qvalues_current_state = max(qvalues_current_state)
 		# ---------------------------------------------------------------------------
-		# Compute q-value
+		# Compute the qvalue.
+		# The bias of 1.9 was added to be able to compare the results of the simulated
+		# navigation experiment (produced by this code) to the old real navigation experiment.
+		# Indeed, the real robot had a bug, and this bias allows to "mimic" the bug effect
+		# (corrected in this code), and thus to compare the results and reproduce those of
+		# the paper. This biais can of course be remooved for new experiments !
 		new_RPE = 1.9*reward_obtained + self.gamma * max_qvalues_current_state - qvalue_previous_state
 		new_qvalue = qvalue_previous_state + self.alpha * new_RPE
 		self.dict_qvalues[str(previous_state),"qvals"][int(action)] = new_qvalue
@@ -172,9 +172,9 @@ class ModelFree:
 		# ---------------------------------------------------------------------------
 
 
-	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan): 
+	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan, new_goal): 
 		"""
-		Run the model-free RL expert
+		Run the model-free RL expert.
 		"""
 		# ---------------------------------------------------------------------------
 		print("------------------------ MF --------------------------------")
@@ -185,8 +185,29 @@ class ModelFree:
 		self.dict_qvalues[(str(current_state),"actioncount")] = action_count
 		self.dict_qvalues[(str(previous_state),"visits")] += 1
 		# ---------------------------------------------------------------------------
+		# The qvalues of the rewarded state have to be null. So set them to 0 the
+		# first time the rewarded state is met
+		if reward_obtained == 1 and cumulated_reward == 1:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+		# ---------------------------------------------------------------------------
+		# Same with the new rewarded state after the environmental change
+		if reward_obtained == 1 and new_goal == self.wait_new_goal == True:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+			self.wait_new_goal = False
+		# ---------------------------------------------------------------------------
+		# If the previous state is the rewarded state, the agent must not run its
+		# learning process
+		if previous_state == self.rewarded_state:
+			self.not_learn = True
+		else:
+			self.not_learn = False
+		# ---------------------------------------------------------------------------
 		if self.not_learn == False:
-			# Update the q-values of the previous state using Q-learning
+			# Update the qvalues of the previous state using Q-learning
 			self.new_qvalue = self.learn(previous_state, decided_action, current_state, reward_obtained)
 		# ---------------------------------------------------------------------------
 		# If the expert was choosen to plan, compute the news probabilities of actions
@@ -197,7 +218,7 @@ class ModelFree:
 			# Run the process of inference
 			qvalues = self.infer(current_state)
 			# -----------------------------------------------------------------------
-			# Sum the duration of planification with a low pass filter
+			# Sum the duration of the planification with a low pass filter
 			current_time = datetime.datetime.now()
 			new_plan_time = (current_time - old_time).total_seconds()
 			old_plan_time = get_duration(self.dict_duration, current_state)
@@ -206,7 +227,7 @@ class ModelFree:
 		else:
 			qvalues = self.dict_qvalues[(str(current_state),"qvals")]
 			# -----------------------------------------------------------------------
-		decided_action, actions_prob = self.decide(current_state, qvalues)
+		decided_action = self.decide(current_state, qvalues)
 		# -------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
@@ -215,17 +236,6 @@ class ModelFree:
 			for dictStateValues in self.dict_decision["values"]:
 				if dictStateValues["state"] == current_state:
 					prefered_action[action] = sum(dictStateValues["history_decisions"][action])
-		# ---------------------------------------------------------------------------
-		# Prepare data to return 
-		plan_time = get_duration(self.dict_duration, current_state)
-		selection_prob = get_filtered_prob(self.dict_actions_prob, current_state)
-		# ---------------------------------------------------------------------------
-		if reward_obtained > 0.0:
-			self.not_learn = True
-			for a in range(0,self.action_space):
-				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
-		else:
-			self.not_learn = False
 		# ---------------------------------------------------------------------------
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
 			# Build the summary file 
@@ -236,10 +246,6 @@ class ModelFree:
 				prefixe = 'v%d_TBMF_'%(VERSION)
 				self.summary_log = open(prefixe+'summary_log.dat', 'a')
 				self.summary_log.write(f"{self.alpha} {self.gamma} {self.beta} {cumulated_reward}\n")
-		# ---------------------------------------------------------------------------
-		#print("Qvalues : ")
-		#for action in range(0,self.action_space):
-			#print(self.dict_qvalues[str(current_state),"qvals"][int(action)])
 		# ----------------------------------------------------------------------------
 		return decided_action
 		# ---------------------------------------------------------------------------

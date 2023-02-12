@@ -21,19 +21,19 @@ __status__ = "Production"
 
 from utility import *
 
-VERSION = 1
+VERSION = 2
 
 class ModelBased:
 	"""
-	This class implements a model-based reinforcement learning algorithm (Value Iteration).
+	This class implements a tabular model-based reinforcement learning algorithm (Value Iteration).
     """
 
-	def __init__(self, expert, experiment, map_file, initial_variables, action_space, boundaries_exp, parameters, log):
+	def __init__(self, expert, experiment, env_file, initial_variables, action_space, boundaries_exp, parameters, log):
 		"""
-		Iinitialise values and models
+		Iinitialize values and models
 		"""
 		# -----------------------------------------------------------------------------
-		# Initialise all the variables which will be used
+		# initialize all the variables which will be used
 		self.ID = expert
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
@@ -45,17 +45,14 @@ class ModelBased:
 		self.beta = parameters["beta"]
 		self.log = log["log"]
 		self.summary = log["summary"]
+		self.rewarded_state = None
 		action_count = initial_variables["action_count"]
-		decided_action = initial_variables["decided_action"]
-		previous_state = initial_variables["previous_state"]
-		current_state = initial_variables["current_state"]
 		self.init_qvalue = initial_variables["qvalue"]
-		init_reward = initial_variables["reward"]
 		init_delta = initial_variables["delta"]
-		init_plan_time = initial_variables["plan_time"]
 		self.action_space = action_space
 		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
+		self.wait_new_goal = True
 		# ----------------------------------------------------------------------------
 		# // List and dicts for store data //
 		# Create the list of states
@@ -92,27 +89,27 @@ class ModelBased:
 		self.dict_duration["actioncount"] = action_count
 		self.dict_duration["values"] = list()
 		# -----------------------------------------------------------------------------
-		# Load the transition model which will be used as map
-		with open(map_file,'r') as file2:
-			self.map = json.load(file2)
-		# For each state of the map : 
-		for state in self.map["transitionActions"]:
+		# Load the transition model which will be used as the environment representation
+		with open(env_file,'r') as file2:
+			self.env = json.load(file2)
+		# For each state of the environment : 
+		for state in self.env["transitionActions"]:
 			s = str(state["state"])
 			t = state["transitions"]
 			# -----------------------------------------------------------------------
 			self.dict_qvalues[(s,"qvals")] = [self.init_qvalue]*self.action_space
 			self.dict_qvalues[(s,"visits")] = 0
 			# -----------------------------------------------------------------------
-			# - initialise the probabilties of actions
+			# - initialize the probabilties of actions
 			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*self.action_space, "filtered_prob": [init_actions_prob]*self.action_space})
 			# -------------------------------------------------------------------------
-			# - initialise the "identity of the selected action" dict
+			# - initialize the "identity of the selected action" dict
 			self.dict_decision["values"].append({"state": s, "history_decisions": [[0]*self.window_size]*self.action_space})
 			# -----------------------------------------------------------------------
-			# - initialise the delta prob dict
+			# - initialize the delta prob dict
 			self.dict_delta_prob["values"].append({"state": s, "delta_prob": init_delta})
 			# -------------------------------------------------------------------------
-			# - initialise the duration dict
+			# - initialize the duration dict
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
 		# -----------------------------------------------------------------------------
 
@@ -149,7 +146,7 @@ class ModelBased:
 		# Soft-max function
 		actions_prob = softmax_actions_prob(qvals, self.beta)
 		new_probs = list()
-		for action, prob in actions_prob.items():
+		for prob in actions_prob.values():
 			new_probs.append(prob)
 		set_actions_prob(self.dict_actions_prob, current_state, new_probs)
 		# -------------------------------------------------------------------------
@@ -163,7 +160,7 @@ class ModelBased:
 		# The end of the soft-max function
 		decision, choosen_action = softmax_decision(actions_prob, actions)
 		# ---------------------------------------------------------------------------
-		return choosen_action, actions_prob
+		return choosen_action
 		# ----------------------------------------------------------------------------
 
 
@@ -181,7 +178,7 @@ class ModelBased:
 			accu = 0.0
 			reward = get_reward(self.dict_rewards, this_state, action)
 			# ----------------------------------------------------------------
-			# loop througth the transitions
+			# Loop througth the transitions and compute the qvalues.
 			for state in self.dict_transitions["transitionActions"]:
 				if str(state["state"]) == this_state:
 					for transition in state["transitions"]:
@@ -194,6 +191,11 @@ class ModelBased:
 							flag = True
 							accu += (prob * (1.9*reward + self.gamma * vValue))
 					break
+			# The bias of 1.9 was added to be able to compare the results of the simulated
+			# navigation experiment (produced by this code) to the old real navigation experiment.
+			# Indeed, the real robot had a bug, and this bias allows to "mimic" the bug effect
+			# (corrected in this code), and thus to compare the results and reproduce those of
+			# the paper. This biais can of course be remooved for new experiments !
 			# ----------------------------------------------------------------
 			if flag == True:
 				self.dict_qvalues[(str(this_state),"qvals")][int(action)] = accu
@@ -236,7 +238,7 @@ class ModelBased:
 
 	def update_reward(self, current_state, reward_obtained):
 		"""
-		Update the the model of reward
+		Update the the rewards model.
 		"""
 		# ----------------------------------------------------------------------------
 		#expected_reward = reward_obtained
@@ -252,14 +254,14 @@ class ModelBased:
 				action = link[0]
 				previous_state = link[1]
 				prob = get_transition_prob(self.dict_transitions, previous_state, action, state["state"])
-				relative_reward = prob  * state["reward"]
+				relative_reward = prob * state["reward"]
 				set_reward(self.dict_rewards, previous_state, action, relative_reward)
 				# --------------------------------------------------------------------
 
 
-	def update_prob(self, previous_state, action, current_state):
+	def update_prob(self, previous_state, action):
 		"""
-		Update the the model of transition
+		Update the the transitions model.
 		"""
 		# ----------------------------------------------------------------------------
 		delta_prob = 0.0 
@@ -281,7 +283,7 @@ class ModelBased:
 		"""
 		# ----------------------------------------------------------------------------
 		# // Update the transition model //
-		self.update_prob(previous_state, action, current_state)
+		self.update_prob(previous_state, action)
 		# ----------------------------------------------------------------------------
 		# // Update the reward model //
 		self.update_reward(current_state, reward_obtained)
@@ -290,27 +292,27 @@ class ModelBased:
 
 	def update_data_structure(self, action_count, previous_state, action, current_state, reward_obtained):
 		"""
-		Update the data structure of the rewards and the transitions models
+		Update the data structure of the rewards and the transitions model
 		"""
 		# ----------------------------------------------------------------------------
 		self.dict_qvalues[(str(current_state),"actioncount")] = action_count
 		self.dict_transitions["actioncount"] = action_count
 		self.dict_rewards["actioncount"] = action_count
 		# ----------------------------------------------------------------------------
-		# For the modelof qvalues, update only the numer of visit
+		# For the model of qvalues, update only the number of visit
 		self.dict_qvalues[(str(previous_state),"visits")] += 1 #CHECK IF GOOD
 		# ----------------------------------------------------------------------------
-		# If the previous state is unknown, add it in the states model, in the reward model and in the transition model
-		# (not needful for the model of q-values because it has already is final size)
+		# If the previous state is unknown, add it in the states model, in the rewards model and in the transitions model
+		# (not needful for the model of qvalues because it has already its final size)
 		if previous_state not in self.list_states:
-			# do not do for rewarded state
+			# not do for rewarded state
 			if self.not_learn == False:
 				self.list_states.append(previous_state)
 				self.list_actions[previous_state] = [action]
 				initialize_rewards(self.dict_rewards, previous_state, self.action_space)
 				initialize_transition(self.dict_transitions, previous_state, action, current_state, 1, self.window_size)
 		else:
-			# do not do for rewarded state
+			# not do for rewarded state
 			if self.not_learn == False:
 				if action not in self.list_actions[previous_state]:
 					self.list_actions[previous_state].append(action)
@@ -328,7 +330,7 @@ class ModelBased:
 					# If the transition doesn't exist, add it
 					if transition == False:
 						add_transition(self.dict_transitions, previous_state, action, current_state, 0, self.window_size)
-					# If it exist, update the window of transitions
+					# If it exists, update the window of transitions
 					else:
 						set_transitions_window(self.dict_transitions, previous_state, action, current_state, self.window_size)
 		# # Else delete from the list of state
@@ -369,7 +371,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 
 
-	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan): 
+	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan, new_goal): 
 		"""
 		Run the model-based RL expert
 		"""
@@ -381,15 +383,36 @@ class ModelBased:
 		self.dict_delta_prob["actioncount"] = action_count
 		self.dict_qvalues[(str(current_state),"actioncount")] = action_count
 		self.dict_qvalues[(str(previous_state),"visits")] += 1
-		# ----------------------------------------------------------------------------
+		# ---------------------------------------------------------------------------
+		# The qvalues of the rewarded state have to be null. So set them to 0 the
+		# first time the rewarded state is met
+		if reward_obtained == 1 and cumulated_reward == 1:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+		# ---------------------------------------------------------------------------
+		# Same with the new rewarded state after the environmental change
+		if reward_obtained == 1 and new_goal == self.wait_new_goal == True:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+			self.wait_new_goal = False
+		# ---------------------------------------------------------------------------
+		# If the previous state is the reward state, the agent must not run its
+		# learning process
+		if previous_state == self.rewarded_state:
+			self.not_learn = True
+		else:
+			self.not_learn = False
+		# ---------------------------------------------------------------------------
 		# Update the data structure of the models (states, rewards, transitions, qvalues)
 		self.update_data_structure(action_count, previous_state, decided_action, current_state, reward_obtained)
 		# ----------------------------------------------------------------------------
 		if self.not_learn == False:
-		# Update the transition model and the reward model according to the learning.
+		# Update the transition model and the reward model
 			self.learn(previous_state, decided_action, current_state, reward_obtained)
 		# ----------------------------------------------------------------------------
-		# If the expert was choosen to plan, update all the q-values using planification
+		# If the expert was choosen to plan, update all the qvalues using planification
 		if do_we_plan:
 			# ------------------------------------------------------------------------
 			old_time = datetime.datetime.now()
@@ -407,7 +430,7 @@ class ModelBased:
 			qvalues = self.dict_qvalues[(str(current_state),"qvals")]
 		# ----------------------------------------------------------------------------
 		# Choose the next action to do from the current state using soft-max policy.
-		decided_action, actions_prob = self.decide(current_state, qvalues)
+		decided_action = self.decide(current_state, qvalues)
 		# -------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
@@ -416,16 +439,6 @@ class ModelBased:
 			for dictStateValues in self.dict_decision["values"]:
 				if dictStateValues["state"] == current_state:
 					prefered_action[action] = sum(dictStateValues["history_decisions"][action])
-		# ---------------------------------------------------------------------------
-		plan_time = get_duration(self.dict_duration, current_state)
-		selection_prob = get_filtered_prob(self.dict_actions_prob, current_state)
-		# ----------------------------------------------------------------------------
-		if reward_obtained > 0.0:
-			self.not_learn = True
-			for a in range(0,self.action_space):
-				self.dict_qvalues[(current_state,"qvals")] = [0.0]*self.action_space
-		else:
-			self.not_learn = False
 		# ----------------------------------------------------------------------------
 		if (action_count == self.duration) or (cumulated_reward == self.max_reward):
 			# Build the summary file 

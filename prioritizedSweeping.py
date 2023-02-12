@@ -15,7 +15,7 @@ __author__ = "Jeanne Barthelemy & Rémi Dromnelle"
 __version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
-__status__ = "Production"
+__status__ = "Development"
 
 from utility import *
 
@@ -27,12 +27,12 @@ class ModelBased:
 	This class implements a model-based learning algorithm (Prioritized Sweeping).
     """
 
-	def __init__(self, experiment, map_file, initial_variables, actions_space, boundaries_exp, parameters, log):
+	def __init__(self, experiment, env_file, initial_variables, actions_space, boundaries_exp, parameters, log):
 		"""
-		Iinitialise values and models
+		Iinitialize values and models
 		"""
 		# -----------------------------------------------------------------------------
-		# Initialise all the variables which will be used
+		# initialize all the variables which will be used
 		self.print = log["print"]
 		self.experiment = experiment
 		self.max_reward = boundaries_exp["max_reward"]
@@ -109,11 +109,11 @@ class ModelBased:
 
 
 		# -----------------------------------------------------------------------------
-		# Load the transition model which will be used as map
-		with open(map_file,'r') as file2:
-			self.map = json.load(file2)
+		# Load the transition model which will be used as environment
+		with open(env_file,'r') as file2:
+			self.env = json.load(file2)
 		# For each state of the map : 
-		for state in self.map["transitionActions"]:
+		for state in self.env["transitionActions"]:
 			s = str(state["state"])
 			t = state["transitions"]
 			q = list()
@@ -126,7 +126,7 @@ class ModelBased:
 				# 	for i in range(transition["prob"]):
 				# 		tab_act.append(str(transition["state"]))
 			# -------------------------------------------------------------------------
-			# - initialise the qvalues dict 
+			# - initialize the qvalues dict 
 			
 			dictStateValues = dict()
 			dictStateValues["state"] = s
@@ -143,16 +143,16 @@ class ModelBased:
 			self.dict_qvalues[(s,"qvals")]=[self.init_qvalue]*8
 			self.dict_qvalues[(s,"visits")]=0
 			# -----------------------------------------------------------------------
-			# - initialise the probabilties of actions
+			# - initialize the probabilties of actions
 			self.dict_actions_prob["values"].append({"state": s, "actions_prob": [init_actions_prob]*8, "filtered_prob": [init_actions_prob]*8})
 			# -------------------------------------------------------------------------
-			# - initialise the delta prob dict
+			# - initialize the delta prob dict
 			self.dict_delta_prob["values"].append({"state": s, "delta_prob": init_delta})
 			# -------------------------------------------------------------------------
-			# - initialise the duration dict
+			# - initialize the duration dict
 			self.dict_duration["values"].append({"state": s, "duration": init_delta})
 		# -----------------------------------------------------------------------------
-		# Initialise logs
+		# initialize logs
 		self.directory_flag = False
 		if self.logNumber in [1]:
 			try:
@@ -272,7 +272,7 @@ class ModelBased:
 		for state in self.dict_qvalues["values"]:
 			if state["state"] == this_state:
 				# ---------------------------------------------------------------------
-				# loop througth the q-values
+				# loop througth the qvalues
 		"""
 		for i in range (0,8):
 			action = i 
@@ -326,7 +326,7 @@ class ModelBased:
 
 	def plan(self):
 		"""
-		Update q-values using value iteration algorithm (VI)
+		Update qvalues using value iteration algorithm (VI)
 		"""
 		# ----------------------------------------------------------------------------
 		List_variation=[]
@@ -365,7 +365,7 @@ class ModelBased:
 		for state in self.dict_qvalues["values"]:
 			if state["state"] == this_state:
 				# ---------------------------------------------------------------------
-				# loop througth the q-values
+				# loop througth the qvalues
 				for qvalue in state["values"]:
 					if qvalue["action"] == action:
 		'''
@@ -443,7 +443,7 @@ class ModelBased:
 				for state in self.dict_qvalues["values"]:
 					if state["state"] == this_state:
 						# ---------------------------------------------------------------------
-						# loop througth the q-values
+						# loop througth the qvalues
 						for qvalue in state["values"]:
 							if qvalue["action"] == action:
 				"""
@@ -604,7 +604,7 @@ class ModelBased:
 		self.dict_qvalues[(str(previous_state),"visits")] += 1 #CHECK IF GOOD
 		# ----------------------------------------------------------------------------
 		# If the previous state is unknown, add it in the states model, in the reward model and in the transition model
-		# (not needful for the model of q-values because it has already is final size)
+		# (not needful for the model of qvalues because it has already is final size)
 		if previous_state not in self.list_states:
 			self.list_states.append(previous_state)
 			initialize_rewards(self.dict_rewards, previous_state, self.actions_space)
@@ -674,7 +674,7 @@ class ModelBased:
 		# Update the transition model and the reward model according to the learning.
 			self.learn(previous_state, decided_action, current_state, reward_obtained)
 		# ----------------------------------------------------------------------------
-		# If the expert was choosen to plan, update all the q-values using planification
+		# If the expert was choosen to plan, update all the qvalues using planification
 		if do_we_plan or reward_obtained != 0:
 			# ------------------------------------------------------------------------
 			
