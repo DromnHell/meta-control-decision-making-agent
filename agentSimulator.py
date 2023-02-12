@@ -229,15 +229,15 @@ def manage_arguments():
 	parser = OptionParser(usage)
 	# -------------------------------------------------------------------------------
 	# OPTIONS
-	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts", default = "random")
-	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time", default = 1.0)
+	parser.add_option("-c", "--criterion", action = "store", type = "string", dest = "criterion", help = "This option is the criterion used for the trade-off betwen the two experts.", default = "random")
+	parser.add_option("-k", "--coeff_kappa", action = "store", type = "float", dest = "coeff_kappa", help = "This option is the coefficient use by the kappa parameter to weight the time.", default = 1.0)
 	parser.add_option("-r", "--max_reward", action = "store", type = "int", dest = "max_reward", help = "This option is the maximum cumulated reward that the agent will reach before to stop.", default = 10000)
-	parser.add_option("-d", "--duration", action = "store", type = "int", dest = "duration", help = "This option is the maximum duration during which the agent will work.", default = 100000)
+	parser.add_option("-d", "--duration", action = "store", type = "int", dest = "duration", help = "This option is the maximum duration during which the agent will run.", default = 100000)
 	parser.add_option("-w", "--window_size", action = "store", type = "int", dest = "window_size", help = "This option is the size of the window of transitions memorized by the agent.", default = 10)
-	parser.add_option("-g", "--new_goal", action = "store_true", dest = "new_goal", help = "This option says if the goal will change during the experiment", default = False)
-	parser.add_option("-t", "--del_trans", action = "store_true", dest = "del_trans", help = "This option says if the transitions will change during the experiment", default = False)
-	parser.add_option("-l", "--log", action = "store_true", dest = "log", help =  "This option permit to log the data.", default = False)
-	parser.add_option("-s", "--summary", action = "store_true", dest = "summary", help = "This option permit to make a summary of the data in one file to the grid search.", default = False)
+	parser.add_option("-g", "--new_goal", action = "store_true", dest = "new_goal", help = "This option says if the goal will change during the experiment. Can't be set with (-t) option.", default = False)
+	parser.add_option("-t", "--del_trans", action = "store_true", dest = "del_trans", help = "This option says if transitions will be deleted during the experiment. Can't be set with (-g) option.", default = False)
+	parser.add_option("-l", "--log", action = "store_true", dest = "log", help =  "This option allows to log the data.", default = False)
+	parser.add_option("-s", "--summary", action = "store_true", dest = "summary", help = "This option allow to make a summary of the data in one file.", default = False)
 	# -------------------------------------------------------------------------------
 	(options, args) = parser.parse_args()
 	# -------------------------------------------------------------------------------

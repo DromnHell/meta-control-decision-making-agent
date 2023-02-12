@@ -82,7 +82,7 @@ class MetaController:
 			norm_prob = [prob / sum(probs) for prob in probs]
 			entropy = shanon_entropy(norm_prob)
 			entropy_probs.append(entropy)
-			print(f"Entropy {experts_id[it]} : {entropy}")
+			#print(f"Entropy {experts_id[it]} : {entropy}")
 		# ---------------------------------------------------------------------------
 		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
 		highest_entropy = max(entropy_probs)
@@ -92,14 +92,16 @@ class MetaController:
 		for it, prob in enumerate(entropy_probs):
 			norm_entropy = prob / max_entropy
 			self.norm_entropy[experts_id[it]] = norm_entropy
-			print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
+			#print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
+		print(f"Norm entropies : {self.norm_entropy}")
 		# ---------------------------------------------------------------------------
 		max_duration = max(duration)
 		if max_duration == 0.0:
 			max_duration = 0.000000000001
-		norm_duration = list()
-		for d in duration:
-			norm_duration.append(d / max_duration)
+		norm_duration = dict()
+		for it, d in enumerate(duration):
+			norm_duration[experts_id[it]] = d / max_duration
+		print(f"Norm durations : {norm_duration}")
 		# ---------------------------------------------------------------------------
 		entropy = mean_entropy
 		coeff = math.exp(-entropy * self.coeff_kappa)
@@ -112,10 +114,10 @@ class MetaController:
 		print(f"Coeff : exp(-{entropy} * {self.coeff_kappa}) = {coeff}")
 		# ---------------------------------------------------------------------------
 		qvalues = dict()
-		for index, (key, value) in enumerate(self.norm_entropy.items()):
-			qval = - (value + coeff * norm_duration[index])
+		for key, value in self.norm_entropy.items():
+			qval = - (value + coeff * norm_duration[key])
 			qvalues[key] = qval
-			print(f"Qval {key} : - ({value} + {coeff} * {norm_duration[index]}) = {qval}")
+			#print(f"Qval {key} : - ({value} + {coeff} * {norm_duration[key]}) = {qval}")
 		# ---------------------------------------------------------------------------
 		# Soft-max function
 		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
@@ -154,7 +156,8 @@ class MetaController:
 			norm_prob = [prob / sum(probs) for prob in probs]
 			entropy = shanon_entropy(norm_prob)
 			entropy_probs.append(entropy)
-			print(f"Entropy {experts_id[it]} : {entropy}")
+			#print(f"Entropy {experts_id[it]} : {entropy}")
+		print(f"Norm entropies : {self.norm_entropy}")
 		# ---------------------------------------------------------------------------
 		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
 		highest_entropy = max(entropy_probs)
@@ -164,7 +167,7 @@ class MetaController:
 		for it, prob in enumerate(entropy_probs):
 			norm_entropy = prob / max_entropy
 			self.norm_entropy[experts_id[it]] = norm_entropy
-			print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
+			#print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
 		# ---------------------------------------------------------------------------
 		qvalues = dict()
 		for key, value in self.norm_entropy.items():
