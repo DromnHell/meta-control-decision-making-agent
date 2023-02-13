@@ -36,45 +36,42 @@ class DQN:
 		# initialize all the variables which will be used
 		self.ID = expert
 		self.experiment = experiment
+		action_count = initial_variables["action_count"]
+		self.init_qvalue = initial_variables["qvalue"]
+		init_actions_prob = initial_variables["actions_prob"]
+		self.action_space = spaces["actions"]
+		self.state_space = spaces["states"]
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
 		self.alpha = parameters["alpha"]
 		self.gamma = parameters["gamma"]
-		self.alpha_min = 0.01
-		self.alpha_decay = 1.001
 		self.beta = parameters["beta"]
-		self.beta_max = 50
-		self.beta_decay = 1.005
+		self.beta_max = parameters["beta_max"]
+		self.beta_growth = parameters["beta_growth"]
 		self.log = log["log"]
 		self.summary = log["summary"]
-		self.rewarded_state = None
-		action_count = initial_variables["action_count"]
-		self.init_qvalue = initial_variables["qvalue"]
-		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
 		self.wait_new_goal = True
-		self.action_space = spaces["actions"]
-		self.state_space = spaces["states"]
+		self.rewarded_state = None
 		# ---------------------------------------------------------------------------
 		# Build DQN models
-		self.model = self._build_model()
-		self.target_model = self._build_model()
-		self.target_model.set_weights(self.model.get_weights())
+		self.model = self.build_model()
+		model_weights = self.model.get_weights()
+		self.target_model = self.build_model()
+		self.target_model.set_weights(model_weights)
 		# Inputs for previous (ps) and current (cs) states
 		self.input_ps = np.array([0]*self.state_space)
 		self.input_cs = np.array([0]*self.state_space)
 		# How many last samples to keep for model training
-		self.train_start = 128
+		self.train_start = 256
 		self.replay_memory_size = 1000
 		self.replay_memory = col.deque(maxlen = self.replay_memory_size)
 		# How many samples to use for training
-		self.minibatch_size = 128
+		self.minibatch_size = 256
 		# Update target 
 		self.update_target_every = 20
 		self.target_update_counter = 0
-		# ---------------------------------------------------------------------------
-		self.final_state = -1 
 		# ---------------------------------------------------------------------------
 		#self.tensorboard = ModifiedTensorBoard(log_dir=f"logs/DQN-{int(time.time())}")
 		# ---------------------------------------------------------------------------
@@ -115,28 +112,14 @@ class DQN:
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
 		# ---------------------------------------------------------------------------
 
-
-	def __del__(self):
-		"""
-		Close all log files
-		"""
-		# ---------------------------------------------------------------------------
-		# if self.log == True:
-		# 	self.reward_log.close()
-		# 	#self.qvalues_evolution_log.close()
-		# 	self.actions_evolution_log.close()
-		# 	self.states_evolution_log.close()
-		# 	self.monitoring_values_log.close()
-		# ---------------------------------------------------------------------------
-
-	def _build_model(self):
+	def build_model(self):
 		"""
 		Neural Net for Deep-Q learning Model
 		"""
 		# ---------------------------------------------------------------------------
 		model = Sequential()
-		model.add(Dense(76, input_dim = self.state_space, activation = 'relu'))
-		model.add(Dense(76, activation = 'relu'))
+		model.add(Dense(64, input_dim = self.state_space, activation = 'relu'))
+		model.add(Dense(64, activation = 'relu'))
 		model.add(Dense(self.action_space, activation = 'linear'))
 		model.summary()
 		model.compile(loss = 'mse', optimizer = Adam(lr = self.alpha), metrics = ["accuracy"])
@@ -210,19 +193,19 @@ class DQN:
 		"""
 		Train the neural network with replay
 		"""
-		# ----------------------------------------------------------------------------
+		# ----------------------------------------------------------------------------
 		# Get a minibatch of random samples from memory replay table
 		minibatch = random.sample(self.replay_memory, self.minibatch_size)
 		# Get current stats from minibath
 		previous_states = np.array([transition[0] for transition in minibatch])
 		current_states = np.array([transition[3] for transition in minibatch])
-		# Query neural network model for qvalues
+		# Query neural network model for qvalues in one times instead in the loop
 		qvalues_previous_states = self.model.predict(previous_states)
 		qvalues_current_states = self.target_model.predict(current_states)
-		# ----------------------------------------------------------------------------
+		# ----------------------------------------------------------------------------
 		# Data structure for training
-		x = []
-		y = []
+		x = list()
+		y = list()
 		# ----------------------------------------------------------------------------
 		for index, (previous_state, action, reward, current_state) in enumerate(minibatch):
 			# ------------------------------------------------------------------------
@@ -233,34 +216,13 @@ class DQN:
 				new_qvalue = reward + self.gamma * max_qvalues_current_state
 			# ------------------------------------------------------------------------
 			qvalues_previous_state = qvalues_previous_states[index]
-			plop = qvalues_previous_state[action]
 			qvalues_previous_state[action] = new_qvalue
-			#print(np.where(previous_state == 1), reward, plop, new_qvalue)
-			# if reward == 1:
-			# 	print(np.where(previous_state == 1))
-			# 	print(self.model.predict(np.array(previous_state).reshape(1,self.state_space))[0])
-			# 	print(qvalues_previous_state)
 			# ------------------------------------------------------------------------
 			# Feed the data for training
 			x.append(previous_state)
 			y.append(qvalues_previous_state)
-			# if reward == 1:
-			# 	print("Target")
-			# 	print(qvalues_previous_state)
 		# ----------------------------------------------------------------------------
-		#print("State 19")
-		input_ps_19 = np.array([0]*self.state_space)
-		input_ps_19[19] = 1
-		#print(self.model.predict(np.array(input_ps_19).reshape(1,self.state_space))[0])
-		#print("State 17")
-		input_ps_17 = np.array([0]*self.state_space)
-		input_ps_17[17] = 1
-		#print(self.model.predict(np.array(input_ps_17).reshape(1,self.state_space))[0])
 		self.model.fit(np.array(x), np.array(y), batch_size = self.minibatch_size, verbose = 1)
-		#print("State 19")
-		#print(self.model.predict(np.array(input_ps_19).reshape(1,self.state_space))[0])
-		#print("State 17")
-		#print(self.model.predict(np.array(input_ps_17).reshape(1,self.state_space))[0])
 		# ----------------------------------------------------------------------------
 
 	def learn(self, reward, action):
@@ -272,21 +234,17 @@ class DQN:
 		input_cs = np.reshape(self.input_cs, [1,self.state_space])
 		qvalues_current_state = self.target_model.predict(input_cs)
 		max_qvalues_current_state = np.max(qvalues_current_state)
-		print("Action : "+ str(action))
 		if reward == 1:
 			new_qvalue = reward
 			print(str(reward))
 		else:
 			new_qvalue = reward + self.gamma * max_qvalues_current_state
-			print(str(reward)+" + "+str(self.gamma)+" * "+str(max_qvalues_current_state)+" = "+str(new_qvalue))
+			print(f"{reward} + {self.gamma} * {max_qvalues_current_state} = {new_qvalue}")
 		# -------------------------c--------------------------------------------------
 		targeted_qvalues = self.model.predict(input_ps)
 		targeted_qvalues[0][action] = new_qvalue
-		print(self.model.predict(np.array(input_ps).reshape(1,self.state_space))[0])
-		#print(targeted_qvalues)
 		# ----------------------------------------------------------------------------
 		self.model.fit(input_ps, targeted_qvalues, verbose = 1)
-		print(self.model.predict(np.array(input_ps).reshape(1,self.state_space))[0])
 		# ----------------------------------------------------------------------------
 
 	def update_memory(self, input_ps, decided_action, reward_obtained, input_cs):
@@ -306,6 +264,9 @@ class DQN:
 		self.dict_actions_prob["actioncount"] = action_count
 		self.dict_qvalues[(str(current_state),"actioncount")] = action_count
 		self.dict_qvalues[(str(previous_state),"visits")] += 1
+		# ---------------------------------------------------------------------------
+		# Update beta value
+		self.beta = min(self.beta * self.beta_growth, self.beta_max)
 		# ---------------------------------------------------------------------------
 		# The qvalues of the rewarded state have to be null. So set them to 0 the
 		# first time the rewarded state is met
@@ -340,11 +301,11 @@ class DQN:
 			if len(self.replay_memory) > self.train_start and cumulated_reward > 0:
 				self.learn_whith_replay()
 			#if cumulated_reward > 0:
-			#	self.learn(reward_obtained, decided_action)
+				#self.learn(reward_obtained, decided_action)
 		# ----------------- ----------------------------------------------------------
 		self.target_update_counter += 1
 		if self.target_update_counter == self.update_target_every:
-			print("Update target_model !")
+			print("Update target model !")
 			self.target_model.set_weights(self.model.get_weights())
 			self.target_update_counter = 0
 		# ----------------------------------------------------------------------------
@@ -383,14 +344,10 @@ class DQN:
 				# -------------------------------------------------------------------
 				prefixe = 'v%d_TBDQN_'%(VERSION)
 				self.summary_log = open(prefixe+'summary_log.dat', 'a')
-				self.summary_log.write(str(self.alpha)+" "+str(self.gamma)+" "+str(self.beta)+" "+str(cumulated_reward)+"\n")
+				self.summary_log.write(f"{self.alpha} {self.gamma} {self.beta} {cumulated_reward}\n")
 		# ---------------------------------------------------------------------------
-		#print("Qvalues : ")
-		#for action in range(0,self.action_space):
-			#print(self.dict_qvalues[str(current_state),"qvals"][int(action)])
-		# ----------------------------------------------------------------------------
 		return decided_action
-		# ----------------------------------------------------------------------------
+		# ---------------------------------------------------------------------------
 
 
 
