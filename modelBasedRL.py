@@ -36,6 +36,11 @@ class ModelBased:
 		# initialize all the variables which will be used
 		self.ID = expert
 		self.experiment = experiment
+		action_count = initial_variables["action_count"]
+		self.init_qvalue = initial_variables["qvalue"]
+		init_delta = initial_variables["delta"]
+		init_actions_prob = initial_variables["actions_prob"]
+		self.action_space = action_space
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
@@ -45,14 +50,9 @@ class ModelBased:
 		self.beta = parameters["beta"]
 		self.log = log["log"]
 		self.summary = log["summary"]
-		self.rewarded_state = None
-		action_count = initial_variables["action_count"]
-		self.init_qvalue = initial_variables["qvalue"]
-		init_delta = initial_variables["delta"]
-		self.action_space = action_space
-		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
 		self.wait_new_goal = True
+		self.rewarded_state = None
 		# ----------------------------------------------------------------------------
 		# // List and dicts for store data //
 		# Create the list of states

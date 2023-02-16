@@ -74,9 +74,14 @@ def softmax_actions_prob(qvalues, beta):
 	# -----------------------------------------------------------------------
 	for key, value in qvalues.items():
 		# -------------------------------------------------------------------
-		actions_prob[str(key)] = np.exp(value*beta)
+		prob = np.exp(value*beta)
+		actions_prob[str(key)] = prob
 		# -------------------------------------------------------------------
 		sum_probs += actions_prob[str(key)]
+	# -----------------------------------------------------------------------
+	if math.isinf(sum_probs):
+			print(f"Error : the Qvalues have exploded ! Decreasing the value of the learning rate (alpha) may eventually solve the problem.\n")
+			quit()
 	# -----------------------------------------------------------------------
 	for key, value in qvalues.items():
 		actions_prob[str(key)] = actions_prob[str(key)]/sum_probs
@@ -102,6 +107,7 @@ def softmax_decision(actions_prob, actions):
 		if randval < key_value[1]:
 			decision = key_value[0]
 			action = actions[key_value[0]]
+			print(action)
 			break
 	return decision, action
 # ---------------------------------------------------------------------------

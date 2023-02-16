@@ -36,6 +36,10 @@ class ModelFree:
 		# Initialize all the variables which will be used
 		self.ID = expert
 		self.experiment = experiment
+		action_count = initial_variables["action_count"]
+		self.init_qvalue = initial_variables["qvalue"]
+		init_actions_prob = initial_variables["actions_prob"]
+		self.action_space = action_space
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
@@ -44,13 +48,9 @@ class ModelFree:
 		self.beta = parameters["beta"]
 		self.log = log["log"]
 		self.summary = log["summary"]
-		self.rewarded_state = None
-		action_count = initial_variables["action_count"]
-		self.init_qvalue = initial_variables["qvalue"]
-		self.action_space = action_space
-		init_actions_prob = initial_variables["actions_prob"]
 		self.not_learn = False
 		self.wait_new_goal = True
+		self.rewarded_state = None
 		# ---------------------------------------------------------------------------
 		# // List and dicts to store data //
 		# Create a dict that contains the qvalues of the expert
@@ -168,8 +168,6 @@ class ModelFree:
 		new_qvalue = qvalue_previous_state + self.alpha * new_RPE
 		self.dict_qvalues[str(previous_state),"qvals"][int(action)] = new_qvalue
 		# ---------------------------------------------------------------------------
-		return new_qvalue
-		# ---------------------------------------------------------------------------
 
 
 	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan, new_goal): 
@@ -208,7 +206,7 @@ class ModelFree:
 		# ---------------------------------------------------------------------------
 		if self.not_learn == False:
 			# Update the qvalues of the previous state using Q-learning
-			self.new_qvalue = self.learn(previous_state, decided_action, current_state, reward_obtained)
+			self.learn(previous_state, decided_action, current_state, reward_obtained)
 		# ---------------------------------------------------------------------------
 		# If the expert was choosen to plan, compute the news probabilities of actions
 		if do_we_plan:

@@ -70,11 +70,34 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 
 
-	def entropy_and_cost(self, experts_id, duration, selection_prob):
+	def argmax_function(self, experts_id, qvalues):
 		"""
-		Determine which expert will plan according to a trade-off betwen the cost 
-		(time of planning) and the quality of learning (entropies of the probabilities 
-		ditribution of the actions).
+		"""
+		# ---------------------------------------------------------------------------
+		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
+		who_plan = dict()
+		if qvalues[experts_id[0]] == qvalues[experts_id[1]]:
+			winner = random.choice(experts_id)
+			for expert in experts_id:
+				if expert == winner:
+					who_plan[expert] = True
+				else:
+					who_plan[expert] = False
+		else:
+			keymax = max(qvalues, key = lambda x: qvalues[x])
+			for expert in experts_id:
+				if keymax == expert:
+					who_plan[expert] = True
+				else:
+					who_plan[expert] = False
+		# ---------------------------------------------------------------------------
+		return final_actions_prob, who_plan
+		# ---------------------------------------------------------------------------
+
+
+	def compute_entropy(self, experts_id, selection_prob):
+		"""
+		Compute the normalized shanon entropy
 		"""
 		# ---------------------------------------------------------------------------
 		entropy_probs = list()
@@ -85,7 +108,6 @@ class MetaController:
 			#print(f"Entropy {experts_id[it]} : {entropy}")
 		# ---------------------------------------------------------------------------
 		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
-		highest_entropy = max(entropy_probs)
 		mean_entropy = sum(entropy_probs) / 2
 		# ---------------------------------------------------------------------------
 		self.norm_entropy = dict()
@@ -95,6 +117,45 @@ class MetaController:
 			#print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
 		print(f"Norm entropies : {self.norm_entropy}")
 		# ---------------------------------------------------------------------------
+		return entropy_probs, mean_entropy
+		# ---------------------------------------------------------------------------
+
+
+	def entropy(self, experts_id, selection_prob):
+		"""
+		Determine which expert will plan raccording to the value of the entropies of 
+		the probabilities ditribution of the actions.
+		"""
+		# ---------------------------------------------------------------------------
+		# Compute the quality of learning (entropy)
+		mean_entropy, entropy_probs = self.compute_entropy(experts_id, selection_prob)
+		# ---------------------------------------------------------------------------
+		qvalues = dict()
+		for key, value in self.norm_entropy.items():
+			qvalues[key] = - value
+		# ---------------------------------------------------------------------------
+		# Soft-max function
+		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
+		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
+		# ---------------------------------------------------------------------------
+		# Arg-max function
+		final_actions_prob, who_plan = self.argmax_function(experts_id, qvalues)
+		# ---------------------------------------------------------------------------
+		return final_actions_prob, who_plan
+		# ---------------------------------------------------------------------------
+
+
+	def entropy_and_cost(self, experts_id, duration, selection_prob):
+		"""
+		Determine which expert will plan according to a trade-off betwen the cost 
+		(time of planning) and the quality of learning (entropies of the probabilities 
+		ditribution of the actions).
+		"""
+		# ---------------------------------------------------------------------------
+		# Compute the quality of learning (entropy)
+		entropy_probs, mean_entropy = self.compute_entropy(experts_id, selection_prob)
+		# ---------------------------------------------------------------------------
+		# Compute the cost (duration)
 		max_duration = max(duration)
 		if max_duration == 0.0:
 			max_duration = 0.000000000001
@@ -103,6 +164,7 @@ class MetaController:
 			norm_duration[experts_id[it]] = d / max_duration
 		print(f"Norm durations : {norm_duration}")
 		# ---------------------------------------------------------------------------
+		# Compute the trade-off
 		entropy = mean_entropy
 		coeff = math.exp(-entropy * self.coeff_kappa)
 		# If there is a MF expert, its entropy is choosen instead of the mean entropy
@@ -124,76 +186,7 @@ class MetaController:
 		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
 		# ---------------------------------------------------------------------------
 		# Arg-max function
-		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
-		who_plan = dict()
-		if qvalues[experts_id[0]] == qvalues[experts_id[1]]:
-			winner = random.choice(experts_id)
-			for expert in experts_id:
-				if expert == winner:
-					who_plan[expert] = True
-				else:
-					who_plan[expert] = False
-		else:
-			keymax = max(qvalues, key = lambda x: qvalues[x])
-			for expert in experts_id:
-				if keymax == expert:
-					who_plan[expert] = True
-				else:
-					who_plan[expert] = False
-		# ---------------------------------------------------------------------------
-		return final_actions_prob, who_plan
-		# ---------------------------------------------------------------------------
-
-
-	def entropy(self, experts_id, selection_prob):
-		"""
-		Determine which expert will plan raccording to the value of the entropies of 
-		the probabilities ditribution of the actions.
-		"""
-		# ---------------------------------------------------------------------------
-		entropy_probs = list()
-		for it, probs in enumerate(selection_prob):
-			norm_prob = [prob / sum(probs) for prob in probs]
-			entropy = shanon_entropy(norm_prob)
-			entropy_probs.append(entropy)
-			#print(f"Entropy {experts_id[it]} : {entropy}")
-		print(f"Norm entropies : {self.norm_entropy}")
-		# ---------------------------------------------------------------------------
-		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
-		highest_entropy = max(entropy_probs)
-		mean_entropy = sum(entropy_probs) / 2
-		# ---------------------------------------------------------------------------
-		self.norm_entropy = dict()
-		for it, prob in enumerate(entropy_probs):
-			norm_entropy = prob / max_entropy
-			self.norm_entropy[experts_id[it]] = norm_entropy
-			#print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
-		# ---------------------------------------------------------------------------
-		qvalues = dict()
-		for key, value in self.norm_entropy.items():
-			qvalues[key] = - value
-		# ---------------------------------------------------------------------------
-		# Soft-max function
-		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
-		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
-		# ---------------------------------------------------------------------------
-		# Arg-max function
-		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
-		who_plan = dict()
-		if qvalues[experts_id[0]] == qvalues[experts_id[1]]:
-			winner = random.choice(experts_id)
-			for expert in experts_id:
-				if expert == winner:
-					who_plan[expert] = True
-				else:
-					who_plan[expert] = False
-		else:
-			keymax = max(qvalues, key = lambda x: qvalues[x])
-			for expert in experts_id:
-				if keymax == expert:
-					who_plan[expert] = True
-				else:
-					who_plan[expert] = False
+		final_actions_prob, who_plan = self.argmax_function(experts_id, qvalues)
 		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------

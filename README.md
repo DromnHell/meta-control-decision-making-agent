@@ -60,6 +60,10 @@ reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM
 * The *keyStates.txt* file contains the id of the rewarded states and the initial states.
 * The *spaces.txt* file contains the actions space and the states space.
 * The *parameters.txt* file contains the parameters of the agent.
+  * For the MF expert, the parameters are the learning rate (alpha), the discount factor (gamma) and the exploration rate (beta),
+  * For the MB expert, the parameters are the same as the MF expert,
+  * For the DQN expert, the parameters are alpha, gamma, beta, beta max and the increase rate of beta,
+  * For the MC system, the parameters are alpha and beta.
 
 #### (A) The map autonomously build by the robot (the *realisticNavWorld.json* file is an abstraction of this map). (B) Photo of the arena and the robot.
 
