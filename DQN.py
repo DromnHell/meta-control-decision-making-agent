@@ -17,7 +17,8 @@ __author__ = "Rémi Dromnelle"
 __version__ = "1.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
-__status__ = "Devlopment"
+__status__ = "Development"
+
 
 from utility import *
 
@@ -60,9 +61,6 @@ class DQN:
 		model_weights = self.model.get_weights()
 		self.target_model = self.build_model()
 		self.target_model.set_weights(model_weights)
-		# Inputs for previous (ps) and current (cs) states
-		self.input_ps = np.array([0]*self.state_space)
-		self.input_cs = np.array([0]*self.state_space)
 		# How many last samples to keep for model training
 		self.train_start = 256
 		self.replay_memory_size = 1000
@@ -177,12 +175,12 @@ class DQN:
 		return choosen_action
 		# ----------------------------------------------------------------------------
 
-	def infer(self, current_state):
+	def infer(self, input_cs, current_state):
 		"""
 		Predict the output of the neural network
 		"""
 		# ----------------------------------------------------------------------------
-		qvalues = self.model.predict(np.array(self.input_cs).reshape(1,self.state_space))[0]
+		qvalues = self.model.predict(np.array(input_cs).reshape(1,self.state_space))[0]
 		for action in range(0,self.action_space):
 			self.dict_qvalues[(str(current_state),"qvals")][int(action)] = qvalues[action]
 		# ----------------------------------------------------------------------------
@@ -199,7 +197,7 @@ class DQN:
 		# Get current stats from minibath
 		previous_states = np.array([transition[0] for transition in minibatch])
 		current_states = np.array([transition[3] for transition in minibatch])
-		# Query neural network model for qvalues in one times instead in the loop
+		# Query neural network model for qvalues of minibatch in one time
 		qvalues_previous_states = self.model.predict(previous_states)
 		qvalues_current_states = self.target_model.predict(current_states)
 		# ----------------------------------------------------------------------------
@@ -222,16 +220,16 @@ class DQN:
 			x.append(previous_state)
 			y.append(qvalues_previous_state)
 		# ----------------------------------------------------------------------------
-		self.model.fit(np.array(x), np.array(y), batch_size = self.minibatch_size, verbose = 1)
+		self.model.fit(np.array(x), np.array(y), batch_size = self.minibatch_size, verbose = 2)
 		# ----------------------------------------------------------------------------
 
-	def learn(self, reward, action):
+	def learn(self, input_ps, action, input_cs, reward):
 		"""
 		Train the neural network
 		"""
 		# ---------------------------------------------------------------------------
-		input_ps = np.reshape(self.input_ps, [1,self.state_space])
-		input_cs = np.reshape(self.input_cs, [1,self.state_space])
+		input_ps = np.reshape(input_ps, [1,self.state_space])
+		input_cs = np.reshape(input_cs, [1,self.state_space])
 		qvalues_current_state = self.target_model.predict(input_cs)
 		max_qvalues_current_state = np.max(qvalues_current_state)
 		if reward == 1:
@@ -268,40 +266,18 @@ class DQN:
 		# Update beta value
 		self.beta = min(self.beta * self.beta_growth, self.beta_max)
 		# ---------------------------------------------------------------------------
-		# The qvalues of the rewarded state have to be null. So set them to 0 the
-		# first time the rewarded state is met
-		if reward_obtained == 1 and cumulated_reward == 1:
-			self.rewarded_state = current_state
-			for a in range(0,self.action_space):
-				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
-		# ---------------------------------------------------------------------------
-		# Same with the new rewarded state after the environmental change
-		if reward_obtained == 1 and new_goal == self.wait_new_goal == True:
-			self.rewarded_state = current_state
-			for a in range(0,self.action_space):
-				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
-			self.wait_new_goal = False
-		# ---------------------------------------------------------------------------
-		# If the previous state is the reward state, the agent must not run its
-		# learning process
-		if previous_state == self.rewarded_state:
-			self.not_learn = True
-		else:
-			self.not_learn = False
-		# ---------------------------------------------------------------------------
 		# Update the input vectors for the DQN
-		self.input_ps = np.array([0]*self.state_space)
-		self.input_ps[int(previous_state)] = 1
-		self.input_cs = np.array([0]*self.state_space)
-		self.input_cs[int(current_state)] = 1
+		input_ps = np.array([0]*self.state_space)
+		input_ps[int(previous_state)] = 1
+		input_cs = np.array([0]*self.state_space)
+		input_cs[int(current_state)] = 1
 		# ----------------------------------------------------------------------------
-		if self.not_learn == False:
-			self.update_memory(self.input_ps, decided_action, reward_obtained, self.input_cs)
-			# Save the transition on memory for replaying
-			if len(self.replay_memory) > self.train_start and cumulated_reward > 0:
-				self.learn_whith_replay()
-			#if cumulated_reward > 0:
-				#self.learn(reward_obtained, decided_action)
+		# Save the transition on memory for replaying
+		self.update_memory(input_ps, decided_action, reward_obtained, input_cs)
+		if len(self.replay_memory) > self.train_start and cumulated_reward > 0:
+			self.learn_whith_replay()
+		#if cumulated_reward > 0:
+			#self.learn(input_ps, decided_action, input_cs, reward_obtained)
 		# ----------------- ----------------------------------------------------------
 		self.target_update_counter += 1
 		if self.target_update_counter == self.update_target_every:
@@ -315,7 +291,7 @@ class DQN:
 			old_time = datetime.datetime.now()
 			# ------------------------------------------------------------------------
 			# Run the process of inference
-			qvalues = self.infer(current_state)
+			qvalues = self.infer(input_cs, current_state)
 			# ------------------------------------------------------------------------
 			# Sum the duration of planification with a low pass filter
 			current_time = datetime.datetime.now()
