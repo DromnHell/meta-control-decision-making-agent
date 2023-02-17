@@ -194,7 +194,7 @@ class DQN:
 		# ----------------------------------------------------------------------------
 		# Get a minibatch of random samples from memory replay table
 		minibatch = random.sample(self.replay_memory, self.minibatch_size)
-		# Get current stats from minibath
+		# Get current states from minibath
 		previous_states = np.array([transition[0] for transition in minibatch])
 		current_states = np.array([transition[3] for transition in minibatch])
 		# Query neural network model for qvalues of minibatch in one time
@@ -265,6 +265,7 @@ class DQN:
 		# ---------------------------------------------------------------------------
 		# Update beta value
 		self.beta = min(self.beta * self.beta_growth, self.beta_max)
+		print(f"Beta = {self.beta}")
 		# ---------------------------------------------------------------------------
 		# Update the input vectors for the DQN
 		input_ps = np.array([0]*self.state_space)

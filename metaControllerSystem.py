@@ -70,8 +70,9 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 
 
-	def argmax_function(self, experts_id, qvalues):
+	def choose_an_expert(self, experts_id, qvalues):
 		"""
+		Choose an expert using argmax function (but use softmax to get action probabilities)
 		"""
 		# ---------------------------------------------------------------------------
 		final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
@@ -95,41 +96,51 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 
 
-	def compute_entropy(self, experts_id, selection_prob):
+	def quality_of_learning(self, experts_id, selection_prob):
 		"""
-		Compute the normalized shanon entropy
+		Compute the shanon entropy
 		"""
 		# ---------------------------------------------------------------------------
 		entropy_probs = list()
 		for it, probs in enumerate(selection_prob):
-			norm_prob = [prob / sum(probs) for prob in probs]
-			entropy = shanon_entropy(norm_prob)
-			entropy_probs.append(entropy)
+			if experts_id[it] != None:
+				norm_prob = [prob / sum(probs) for prob in probs]
+				entropy = shanon_entropy(norm_prob)
+				entropy_probs.append(entropy)
+			else:
+				entropy_probs.append(None)
 			#print(f"Entropy {experts_id[it]} : {entropy}")
 		# ---------------------------------------------------------------------------
 		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
-		mean_entropy = sum(entropy_probs) / 2
+		if None in experts_id:
+			mean_entropy = None
+		else:
+			mean_entropy = sum(entropy_probs) / 2
 		# ---------------------------------------------------------------------------
 		self.norm_entropy = dict()
 		for it, prob in enumerate(entropy_probs):
-			norm_entropy = prob / max_entropy
-			self.norm_entropy[experts_id[it]] = norm_entropy
-			#print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
+			if experts_id[it] != None:
+				norm_entropy = prob / max_entropy
+				self.norm_entropy[experts_id[it]] = norm_entropy
+				#print(f"Norm entropy {experts_id[it]} : {norm_entropy}")
+			else:
+				self.norm_entropy[experts_id[it]] = None
 		print(f"Norm entropies : {self.norm_entropy}")
 		# ---------------------------------------------------------------------------
 		return entropy_probs, mean_entropy
 		# ---------------------------------------------------------------------------
 
 
-	def entropy(self, experts_id, selection_prob):
+	def entropy_criterion(self, experts_id, selection_prob):
 		"""
 		Determine which expert will plan raccording to the value of the entropies of 
 		the probabilities ditribution of the actions.
 		"""
 		# ---------------------------------------------------------------------------
 		# Compute the quality of learning (entropy)
-		mean_entropy, entropy_probs = self.compute_entropy(experts_id, selection_prob)
+		mean_entropy, entropy_probs = self.quality_of_learning(experts_id, selection_prob)
 		# ---------------------------------------------------------------------------
+		# Compute the value of experts
 		qvalues = dict()
 		for key, value in self.norm_entropy.items():
 			qvalues[key] = - value
@@ -138,14 +149,14 @@ class MetaController:
 		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
 		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
 		# ---------------------------------------------------------------------------
-		# Arg-max function
-		final_actions_prob, who_plan = self.argmax_function(experts_id, qvalues)
+		# Choose an expert using argmax function
+		final_actions_prob, who_plan = self.choose_an_expert(experts_id, qvalues)
 		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
 
 
-	def entropy_and_cost(self, experts_id, duration, selection_prob):
+	def entropy_and_cost_criterion(self, experts_id, duration, selection_prob):
 		"""
 		Determine which expert will plan according to a trade-off betwen the cost 
 		(time of planning) and the quality of learning (entropies of the probabilities 
@@ -153,7 +164,7 @@ class MetaController:
 		"""
 		# ---------------------------------------------------------------------------
 		# Compute the quality of learning (entropy)
-		entropy_probs, mean_entropy = self.compute_entropy(experts_id, selection_prob)
+		entropy_probs, mean_entropy = self.quality_of_learning(experts_id, selection_prob)
 		# ---------------------------------------------------------------------------
 		# Compute the cost (duration)
 		max_duration = max(duration)
@@ -175,6 +186,7 @@ class MetaController:
 				break
 		print(f"Coeff : exp(-{entropy} * {self.coeff_kappa}) = {coeff}")
 		# ---------------------------------------------------------------------------
+		# Compute the value of experts
 		qvalues = dict()
 		for key, value in self.norm_entropy.items():
 			qval = - (value + coeff * norm_duration[key])
@@ -185,9 +197,28 @@ class MetaController:
 		#final_actions_prob = softmax_actions_prob(qvalues, self.beta_MC)
 		#expert, final_decision = softmax_decision(final_actions_prob, decisions)
 		# ---------------------------------------------------------------------------
-		# Arg-max function
-		final_actions_prob, who_plan = self.argmax_function(experts_id, qvalues)
+		# Choose an expert using argmax function
+		final_actions_prob, who_plan = self.choose_an_expert(experts_id, qvalues)
 		# ---------------------------------------------------------------------------
+		return final_actions_prob, who_plan
+		# ---------------------------------------------------------------------------
+
+
+	def random_criterion(self, experts_id):
+		"""
+		Determine which expert will plan randomly.
+		"""
+		# ---------------------------------------------------------------------------
+		# Choose an expert randomly
+		randval = np.random.rand()
+		if randval <= 0.500000000:
+			who_plan = {experts_id[0]: True, experts_id[1]: False}
+			self.norm_entropy = {experts_id[0]: 0.0, experts_id[1]: 0.0}
+		elif randval > 0.50000000:
+			who_plan = {experts_id[0]: False, experts_id[1]: True}
+			self.norm_entropy = {experts_id[0]: 0.0, experts_id[1]: 0.0}
+		final_actions_prob = {experts_id[0]: 0.5, experts_id[1]: 0.5}
+		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
 
@@ -198,52 +229,17 @@ class MetaController:
 		But we need this function to recorde the entropie values anyway.
 		"""
 		# ---------------------------------------------------------------------------
-		entropy_probs = list()
-		for it, probs in enumerate(selection_prob):
-			if experts_id[it] != None:
-				norm_prob = [prob / sum(probs) for prob in probs]
-				entropy_probs.append(shanon_entropy(norm_prob))
-			else:
-				entropy_probs.append(None)
-		# ---------------------------------------------------------------------------
-		max_entropy = shanon_entropy([1/(self.action_space)]*self.action_space)
-		# ---------------------------------------------------------------------------
-		norm_entropy = list()
-		for prob in entropy_probs:
-			if prob != None:
-				norm_entropy.append(prob / max_entropy)
-			else:
-				norm_entropy.append(None)
-		# ---------------------------------------------------------------------------
+		# Compute the quality of learning (entropy)
+		entropy_probs, mean_entropy = self.quality_of_learning(experts_id, selection_prob)
+		# ---------------------------------------------------------------------------
+		# Set the experts
 		if experts_id[0] != None:
 			who_plan = {experts_id[0]: True, experts_id[1]: None}
 			final_actions_prob = {experts_id[0]: 1, experts_id[1]: None}
-			self.norm_entropy = {experts_id[0]: norm_entropy[0], experts_id[1]: None}
 		else:
 			who_plan = {experts_id[0]: None, experts_id[1]: True}
 			final_actions_prob = {experts_id[0]: None, experts_id[1]: 1}
-			self.norm_entropy = {experts_id[0]: None, experts_id[1]: norm_entropy[1]}
-		# ---------------------------------------------------------------------------
-		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
-
-
-	def random(self, experts_id):
-		"""
-		Determine which expert will plan randomly.
-		"""
-		# ---------------------------------------------------------------------------
-		#print(f"Decisions : {decisions}")
-		randval = np.random.rand()
-		if randval <= 0.500000000:
-			who_plan = {experts_id[0]: True, experts_id[1]: False}
-			self.norm_entropy = {experts_id[0]: 0.0, experts_id[1]: 0.0}
-		elif randval > 0.50000000:
-			who_plan = {experts_id[0]: False, experts_id[1]: True}
-			self.norm_entropy = {experts_id[0]: 0.0, experts_id[1]: 0.0}
-		# ---------------------------------------------------------------------------
-		final_actions_prob = {experts_id[0]: 0.5, experts_id[1]: 0.5}
-		# ---------------------------------------------------------------------------
 		return final_actions_prob, who_plan
 		# ---------------------------------------------------------------------------
 
@@ -254,14 +250,14 @@ class MetaController:
 		and the coordination criterion
 		"""
 		# ---------------------------------------------------------------------------
-		if self.criterion == "random": 
-			final_actions_prob, who_plan = self.random(experts_id)
-		elif self.criterion == "no_coordination":
+		if self.criterion == "no_coordination":
 			final_actions_prob, who_plan = self.no_coordination(experts_id, selection_prob) 
+		elif self.criterion == "random": 
+			final_actions_prob, who_plan = self.random_criterion(experts_id)
 		elif self.criterion == "entropy_and_cost":
-			final_actions_prob, who_plan = self.entropy_and_cost(experts_id, plan_time, selection_prob)
+			final_actions_prob, who_plan = self.entropy_and_cost_criterion(experts_id, plan_time, selection_prob)
 		elif self.criterion == "entropy":
-			final_actions_prob, who_plan = self.entropy(experts_id, selection_prob)
+			final_actions_prob, who_plan = self.entropy_criterion(experts_id, selection_prob)
 		else:
 			sys.exit("This criterion is unknown. Retry with a good one.")
 		# ---------------------------------------------------------------------------
