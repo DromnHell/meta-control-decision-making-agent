@@ -222,7 +222,7 @@ class ModelBased:
 		# -----------------------------------------------------------------------------
 
 
-	def decide(self, previous_state, current_state):
+	def _decide(self, previous_state, current_state):
 		"""
 		Choose the next action using soft-max policy
 		"""
@@ -569,7 +569,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 
 
-	def learn(self, previous_state, action, current_state, reward_obtained):
+	def _learn(self, previous_state, action, current_state, reward_obtained):
 		"""
 		Update the contents of the rewards and the transitions model
 		"""
@@ -672,7 +672,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 		if self.not_learn == False:
 		# Update the transition model and the reward model according to the learning.
-			self.learn(previous_state, decided_action, current_state, reward_obtained)
+			self._learn(previous_state, decided_action, current_state, reward_obtained)
 		# ----------------------------------------------------------------------------
 		# If the expert was choosen to plan, update all the qvalues using planification
 		if do_we_plan or reward_obtained != 0:
@@ -705,7 +705,7 @@ class ModelBased:
 
 		# ----------------------------------------------------------------------------
 		# Choose the next action to do from the current state using soft-max policy.
-		decided_action, actions_prob = self.decide(previous_state, current_state)
+		decided_action, actions_prob = self._decide(previous_state, current_state)
 		# ----------------------------------------------------------------------------
 		# Prepare data to return
 		plan_time = get_duration(self.dict_duration, current_state)

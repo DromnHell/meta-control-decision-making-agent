@@ -43,9 +43,10 @@ class ModelFree:
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
-		self.alpha = parameters["alpha"]
+		self.learning_rate = parameters["alpha"]
 		self.gamma = parameters["gamma"]
 		self.beta = parameters["beta"]
+		self.alpha = parameters["alpha"]
 		self.log = log["log"]
 		self.summary = log["summary"]
 		self.not_learn = False
@@ -107,7 +108,7 @@ class ModelFree:
 		# ----------------------------------------------------------------------------
 
 
-	def decide(self, current_state, qvalues):
+	def _decide(self, current_state, qvalues):
 		"""
 		Choose the next action using a soft-max policy.
 		"""
@@ -134,12 +135,12 @@ class ModelFree:
 		set_filtered_prob(self.dict_actions_prob, current_state, filtered_actions_prob)
 		# ----------------------------------------------------------------------------
 		# The end of the soft-max function
-		decision, choosen_action = softmax_decision(actions_prob, actions)
+		_, choosen_action = softmax_decision(actions_prob, actions)
 		# ---------------------------------------------------------------------------
 		return choosen_action
 		# ----------------------------------------------------------------------------
 
-	def infer(self, current_state):
+	def _infer(self, current_state):
 		"""
 		In the MF expert, the process of inference consists to read the qvalues table.
 		(this function is useless. It's only to be symetric with MB expert).
@@ -149,7 +150,7 @@ class ModelFree:
 		# ----------------------------------------------------------------------------
 
 
-	def learn(self, previous_state, action, current_state, reward_obtained):
+	def _learn(self, previous_state, action, current_state, reward_obtained):
 		"""
 		Update qvalues using Q-learning.
 		"""
@@ -165,7 +166,7 @@ class ModelFree:
 		# (corrected in this code), and thus to compare the results and reproduce those of
 		# the paper. This biais can of course be remooved for new experiments !
 		new_RPE = 1.9*reward_obtained + self.gamma * max_qvalues_current_state - qvalue_previous_state
-		new_qvalue = qvalue_previous_state + self.alpha * new_RPE
+		new_qvalue = qvalue_previous_state + self.learning_rate * new_RPE
 		self.dict_qvalues[str(previous_state),"qvals"][int(action)] = new_qvalue
 		# ---------------------------------------------------------------------------
 
@@ -206,7 +207,7 @@ class ModelFree:
 		# ---------------------------------------------------------------------------
 		if self.not_learn == False:
 			# Update the qvalues of the previous state using Q-learning
-			self.learn(previous_state, decided_action, current_state, reward_obtained)
+			self._learn(previous_state, decided_action, current_state, reward_obtained)
 		# ---------------------------------------------------------------------------
 		# If the expert was choosen to plan, compute the news probabilities of actions
 		if do_we_plan:
@@ -214,7 +215,7 @@ class ModelFree:
 			old_time = datetime.datetime.now()
 			# -----------------------------------------------------------------------
 			# Run the process of inference
-			qvalues = self.infer(current_state)
+			qvalues = self._infer(current_state)
 			# -----------------------------------------------------------------------
 			# Sum the duration of the planification with a low pass filter
 			current_time = datetime.datetime.now()
@@ -224,9 +225,10 @@ class ModelFree:
 			set_duration(self.dict_duration, current_state, filtered_time)
 		else:
 			qvalues = self.dict_qvalues[(str(current_state),"qvals")]
-			# -----------------------------------------------------------------------
-		decided_action = self.decide(current_state, qvalues)
-		# -------------------------------------------------------------------------
+		# ----------------------------------------------------------------------------
+		# Choose the next action to do from the current state using a soft-max policy
+		decided_action = self._decide(current_state, qvalues)
+		# ----------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
 		prefered_action = [0]*self.action_space
@@ -243,7 +245,7 @@ class ModelFree:
 				# -------------------------------------------------------------------
 				prefixe = 'v%d_TBMF_'%(VERSION)
 				self.summary_log = open(prefixe+'summary_log.dat', 'a')
-				self.summary_log.write(f"{self.alpha} {self.gamma} {self.beta} {cumulated_reward}\n")
+				self.summary_log.write(f"{self.learning_rate} {self.gamma} {self.beta} {cumulated_reward}\n")
 		# ----------------------------------------------------------------------------
 		return decided_action
 		# ---------------------------------------------------------------------------

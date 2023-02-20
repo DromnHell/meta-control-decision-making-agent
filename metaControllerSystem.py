@@ -138,7 +138,7 @@ class MetaController:
 		"""
 		# ---------------------------------------------------------------------------
 		# Compute the quality of learning (entropy)
-		mean_entropy, entropy_probs = self.quality_of_learning(experts_id, selection_prob)
+		_, _ = self.quality_of_learning(experts_id, selection_prob)
 		# ---------------------------------------------------------------------------
 		# Compute the value of experts
 		qvalues = dict()
@@ -230,7 +230,7 @@ class MetaController:
 		"""
 		# ---------------------------------------------------------------------------
 		# Compute the quality of learning (entropy)
-		entropy_probs, mean_entropy = self.quality_of_learning(experts_id, selection_prob)
+		_, _ = self.quality_of_learning(experts_id, selection_prob)
 		# ---------------------------------------------------------------------------
 		# Set the experts
 		if experts_id[0] != None:
@@ -244,7 +244,7 @@ class MetaController:
 		# ---------------------------------------------------------------------------
 
 
-	def decide(self, experts_id, plan_time, selection_prob):
+	def _decide(self, experts_id, plan_time, selection_prob):
 		"""
 		Determine which expert will plan based on the action selection probabilities
 		and the coordination criterion
@@ -278,7 +278,7 @@ class MetaController:
 		#print(f"Repartition of the prefered actions : {prefered_action}")
 		# ---------------------------------------------------------------------------
 		# Decide betwen the two experts accoring to the choosen criterion
-		final_actions_prob, who_plan = self.decide(experts_id, plan_time, selection_prob)
+		final_actions_prob, who_plan = self._decide(experts_id, plan_time, selection_prob)
 		# ---------------------------------------------------------------------------
 		# Sum the duration of planification with a low pass filter
 		current_time = datetime.datetime.now()
