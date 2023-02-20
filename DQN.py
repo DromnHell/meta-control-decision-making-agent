@@ -56,7 +56,7 @@ class DQN:
 		self.summary = log["summary"]
 		self.not_learn = False
 		self.wait_new_goal = True
-		self.rewarded_state = None
+		self.rewarded_state = -1
 		# ---------------------------------------------------------------------------
 		# Build DQN models
 		self.model = self._build_model()
@@ -187,8 +187,13 @@ class DQN:
 		Predict the output of the neural network
 		"""
 		# ----------------------------------------------------------------------------
-		X = tf.expand_dims(self.inputs[current_state], axis = 0)
-		qvalues = self.model.predict(X)
+		# The qvalues of the rewarded state have to be null
+		if current_state == int(self.rewarded_state):
+			qvalues = [[0.0]*self.action_space]
+		else:	
+			X = tf.expand_dims(self.inputs[current_state], axis = 0)
+			qvalues = self.model.predict(X)
+		# ----------------------------------------------------------------------------
 		for action in range(0,self.action_space):
 			self.dict_qvalues[(str(current_state),"qvals")][int(action)] = qvalues[0][action]
 		# ----------------------------------------------------------------------------
