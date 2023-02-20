@@ -44,7 +44,7 @@ The main objective of my thesis was to create a meta-control algorithm that allo
 to learn to solve the task.
 * The *modelBasedRL.py* script allows the agent to use a Value-Iteration algorithm (model-based reinforcement learning) to learn to solve the task,
 * The *DQN.py* script allows the agent to use a Deep Q-Network algorithm (deep reinforcement learning) 
-to learn to solve the task.
+to learn to solve the task. This DQN agent uses prioritized experience replay and a second network to compute the targeted qvalues.
 * The *prioritizedSweeping.py* script allows the agent to use a Prioritized Sweeping algorithm (model-based
 reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM AT THE MOMENT). 
 * The *metaControllerSystem.py* script allows the agent to coordinate the different behavioral strategies implemented in the previous scripts.
@@ -62,7 +62,7 @@ reinforcement learning) to learn to solve the task (NOT CONNECTED TO THE PROGRAM
 * The *parameters.txt* file contains the parameters of the agent.
   * For the MF expert, the parameters are the learning rate (alpha), the discount factor (gamma) and the exploration rate (beta),
   * For the MB expert, the parameters are the same as the MF expert,
-  * For the DQN expert, the parameters are alpha, gamma, beta, beta max and the increase rate of beta,
+  * For the DQN expert, the parameters are initial alpha, alpha min, alpha decay, gamma, initial epsilon, epsilon min and epsilon decay,
   * For the MC system, the parameters are alpha and beta.
 
 #### (A) The map autonomously build by the robot (the *realisticNavWorld.json* file is an abstraction of this map). (B) Photo of the arena and the robot.
