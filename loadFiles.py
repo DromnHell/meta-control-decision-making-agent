@@ -122,17 +122,19 @@ def load_parameters(parameters_file, expert_1, expert_2):
 			# -----------------------------------------------------------------------
 			elif line.split(" ")[0] == "DQN":
 				DQN_expert = True
-				if len(line.split(" ")) != 6:
+				if len(line.split(" ")) != 8:
 					print(f"Error : at least one parameter are missing for the DQN expert.\n")
 					error = True
 				else:
 					DQN_param = True
 					try:
 						alpha_DQN = float(line.split(" ")[1])
-						gamma_DQN = float(line.split(" ")[2])
-						beta_DQN = float(line.split(" ")[3])
-						beta_max_DQN = float(line.split(" ")[4])
-						beta_growth_DQN = float(line.split(" ")[5])
+						alpha_min_DQN = float(line.split(" ")[2])
+						alpha_decay_DQN = float(line.split(" ")[3])
+						gamma_DQN = float(line.split(" ")[4])
+						epsilon_DQN = float(line.split(" ")[5])
+						epsilon_min_DQN = float(line.split(" ")[6])
+						epsilon_decay_DQN = float(line.split(" ")[7])
 					except:
 						print(f"Error : the parameters must be float.\n")
 						error = True	
@@ -185,7 +187,7 @@ def load_parameters(parameters_file, expert_1, expert_2):
 	# -------------------------------------------------------------------------------
 	parameters_MF = {"alpha": alpha_MF, "gamma": gamma_MF, "beta": beta_MF}
 	parameters_MB = {"alpha": alpha_MB, "gamma": gamma_MB, "beta": beta_MB}
-	parameters_DQN = {"alpha": alpha_DQN, "gamma": gamma_DQN, "beta": beta_DQN, "beta_max": beta_max_DQN, "beta_growth": beta_growth_DQN}
+	parameters_DQN = {"alpha": alpha_DQN, "alpha_min": alpha_min_DQN, "alpha_decay": alpha_decay_DQN, "gamma": gamma_DQN, "epsilon": epsilon_DQN, "epsilon_min": epsilon_min_DQN, "epsilon_decay": epsilon_decay_DQN}
 	parameters_MC = {"alpha": alpha_MC, "beta": beta_MC}
 	# -------------------------------------------------------------------------------
 	#quit()

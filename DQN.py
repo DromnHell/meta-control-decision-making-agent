@@ -14,7 +14,7 @@ to learn to solve the task.
 '''
 
 __author__ = "Rémi Dromnelle"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Rémi Dromnelle"
 __email__ = "remi.dromnelle@gmail.com"
 __status__ = "Development"
@@ -22,7 +22,7 @@ __status__ = "Development"
 
 from utility import *
 
-VERSION = 1
+VERSION = 2
 
 class DQN:
 	"""
@@ -45,11 +45,13 @@ class DQN:
 		self.max_reward = boundaries_exp["max_reward"]
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
-		self.alpha = parameters["alpha"]
+		self.learning_rate = parameters["alpha"]
+		self.learning_rate_decay = parameters["alpha_decay"]
+		self.learning_rate_min = parameters["alpha_min"]
 		self.gamma = parameters["gamma"]
-		self.beta = parameters["beta"]
-		self.beta_max = parameters["beta_max"]
-		self.beta_growth = parameters["beta_growth"]
+		self.epsilon = parameters["epsilon"]
+		self.epsilon_min = parameters["epsilon_min"]
+		self.epsilon_decay = parameters["epsilon_decay"]
 		self.log = log["log"]
 		self.summary = log["summary"]
 		self.not_learn = False
@@ -57,19 +59,25 @@ class DQN:
 		self.rewarded_state = None
 		# ---------------------------------------------------------------------------
 		# Build DQN models
-		self.model = self.build_model()
+		self.model = self._build_model()
 		model_weights = self.model.get_weights()
-		self.target_model = self.build_model()
+		self.target_model = self._build_model()
 		self.target_model.set_weights(model_weights)
-		# How many last samples to keep for model training
-		self.train_start = 256
-		self.replay_memory_size = 1000
-		self.replay_memory = col.deque(maxlen = self.replay_memory_size)
-		# How many samples to use for training
-		self.minibatch_size = 256
+		self.epoch_number = 1
+		# Build inputs
+		self.inputs = tf.one_hot(range(self.state_space), self.state_space)
+		# Replay memory parameters
+		self.minibatch_size = 64
+		self.memory = list()
+		self.memory_size = 256
+		self.priorities = np.array([])
+		self.alpha = 0.6
+		self.beta = 0.4
+		self.pos = 0
+		self.beta_increment_per_sampling = 0.001
 		# Update target 
-		self.update_target_every = 20
-		self.target_update_counter = 0
+		self.update_target_threshold = 50
+		self.update_target_counter = 0
 		# ---------------------------------------------------------------------------
 		#self.tensorboard = ModifiedTensorBoard(log_dir=f"logs/DQN-{int(time.time())}")
 		# ---------------------------------------------------------------------------
@@ -110,21 +118,6 @@ class DQN:
 			self.dict_duration["values"].append({"state": s, "duration": 0.0})
 		# ---------------------------------------------------------------------------
 
-	def build_model(self):
-		"""
-		Neural Net for Deep-Q learning Model
-		"""
-		# ---------------------------------------------------------------------------
-		model = Sequential()
-		model.add(Dense(64, input_dim = self.state_space, activation = 'relu'))
-		model.add(Dense(64, activation = 'relu'))
-		model.add(Dense(self.action_space, activation = 'linear'))
-		model.summary()
-		model.compile(loss = 'mse', optimizer = Adam(lr = self.alpha), metrics = ["accuracy"])
-		# ---------------------------------------------------------------------------
-		return model
-		# ---------------------------------------------------------------------------
-
 	def get_actions_prob(self, current_state):
 		"""
 		Get the probabilities of actions of the current state
@@ -141,7 +134,22 @@ class DQN:
 		return get_duration(self.dict_duration, current_state)
 		# ----------------------------------------------------------------------------
 
-	def decide(self, current_state, qvalues):
+	def _build_model(self):
+		"""
+		Neural Net for Deep-Q learning model
+		"""
+		# ---------------------------------------------------------------------------
+		model = Sequential()
+		model.add(Dense(20, input_shape = (self.state_space,), activation = 'relu'))
+		model.add(Dense(20, activation = 'relu'))
+		model.add(Dense(self.action_space, activation = 'linear'))
+		model.summary()
+		model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(learning_rate = self.learning_rate))
+		# ---------------------------------------------------------------------------
+		return model
+		# ---------------------------------------------------------------------------
+
+	def _decide(self, current_state, qvalues):
 		"""
 		Choose the next action using soft-max policy
 		"""
@@ -154,8 +162,8 @@ class DQN:
 			qvals[str(a)] = qvalues[a]
 		# ----------------------------------------------------------------------------
 		# Soft-max function
-		#actions_prob = {"0": 0.125, "1": 0.125, "2": 0.125, "3": 0.125, "4": 0.125, "5": 0.125, "6": 0.125, "7": 0.125}
-		actions_prob = softmax_actions_prob(qvals, self.beta)
+		print(f"Beta = {1/self.epsilon}")
+		actions_prob = softmax_actions_prob(qvals, 1/self.epsilon)
 		new_probs = list()
 		for prob in actions_prob.values():
 			new_probs.append(prob)
@@ -169,86 +177,108 @@ class DQN:
 		set_filtered_prob(self.dict_actions_prob, current_state, filtered_actions_prob)
 		# ----------------------------------------------------------------------------
 		# The end of the soft-max function
-		#choosen_action = rargmax(qvalues)
-		decision, choosen_action = softmax_decision(actions_prob, actions)
+		_, choosen_action = softmax_decision(actions_prob, actions)
 		# ----------------------------------------------------------------------------
 		return choosen_action
 		# ----------------------------------------------------------------------------
 
-	def infer(self, input_cs, current_state):
+	def _infer(self, current_state):
 		"""
 		Predict the output of the neural network
 		"""
 		# ----------------------------------------------------------------------------
-		qvalues = self.model.predict(np.array(input_cs).reshape(1,self.state_space))[0]
+		X = tf.expand_dims(self.inputs[current_state], axis = 0)
+		qvalues = self.model.predict(X)
 		for action in range(0,self.action_space):
-			self.dict_qvalues[(str(current_state),"qvals")][int(action)] = qvalues[action]
+			self.dict_qvalues[(str(current_state),"qvals")][int(action)] = qvalues[0][action]
 		# ----------------------------------------------------------------------------
 		return self.dict_qvalues[(str(current_state),"qvals")]
 		# ----------------------------------------------------------------------------
 
-	def learn_whith_replay(self):
+	def _update_target_model(self):
 		"""
-		Train the neural network with replay
+		Update the target model
 		"""
-		# ----------------------------------------------------------------------------
-		# Get a minibatch of random samples from memory replay table
-		minibatch = random.sample(self.replay_memory, self.minibatch_size)
-		# Get current states from minibath
-		previous_states = np.array([transition[0] for transition in minibatch])
-		current_states = np.array([transition[3] for transition in minibatch])
-		# Query neural network model for qvalues of minibatch in one time
-		qvalues_previous_states = self.model.predict(previous_states)
-		qvalues_current_states = self.target_model.predict(current_states)
-		# ----------------------------------------------------------------------------
-		# Data structure for training
-		x = list()
-		y = list()
 		# ----------------------------------------------------------------------------
-		for index, (previous_state, action, reward, current_state) in enumerate(minibatch):
-			# ------------------------------------------------------------------------
-			if reward == 1:
-				new_qvalue = reward
-			else:
-				max_qvalues_current_state = np.amax(qvalues_current_states[index])
-				new_qvalue = reward + self.gamma * max_qvalues_current_state
-			# ------------------------------------------------------------------------
-			qvalues_previous_state = qvalues_previous_states[index]
-			qvalues_previous_state[action] = new_qvalue
-			# ------------------------------------------------------------------------
-			# Feed the data for training
-			x.append(previous_state)
-			y.append(qvalues_previous_state)
-		# ----------------------------------------------------------------------------
-		self.model.fit(np.array(x), np.array(y), batch_size = self.minibatch_size, verbose = 2)
+		self.update_target_counter += 1
+		if self.update_target_counter == self.update_target_threshold:
+			self.target_model.set_weights(self.model.get_weights())
+			self.update_target_counter = 0
 		# ----------------------------------------------------------------------------
 
-	def learn(self, input_ps, action, input_cs, reward):
+	def _get_samples(self, indices):
 		"""
-		Train the neural network
+		Get a memory sample according to priorities
 		"""
-		# ---------------------------------------------------------------------------
-		input_ps = np.reshape(input_ps, [1,self.state_space])
-		input_cs = np.reshape(input_cs, [1,self.state_space])
-		qvalues_current_state = self.target_model.predict(input_cs)
-		max_qvalues_current_state = np.max(qvalues_current_state)
-		if reward == 1:
-			new_qvalue = reward
-			print(str(reward))
+		# ----------------------------------------------------------------------------
+		samples = np.array(self.memory)[indices]
+		# ----------------------------------------------------------------------------
+		previous_states = np.array(samples[:, 0])
+		actions = np.array(samples[:, 1])
+		rewards = np.array(samples[:, 2])
+		current_states = np.array(samples[:, 3])
+		dones = np.array(samples[:, 4])
+		# ----------------------------------------------------------------------------
+		return previous_states, actions, rewards, current_states, dones
+		# ----------------------------------------------------------------------------
+
+	def _sample_indices(self):
+		"""
+		Sample indices
+		"""
+		# ----------------------------------------------------------------------------
+		probabilities = self.priorities ** self.alpha
+		probabilities = probabilities / probabilities.sum()
+		# ----------------------------------------------------------------------------
+		return np.random.choice(len(self.memory), size = self.minibatch_size, p = probabilities)
+		# ----------------------------------------------------------------------------
+
+	def _learn(self):
+		"""
+		Train the neural network with prioritized replay
+		"""
+		# ----------------------------------------------------------------------------
+		# Get a minibatch of according to priorities
+		indices = self._sample_indices()
+		previous_states, actions, rewards, current_states, dones = self._get_samples(indices)
+		# ----------------------------------------------------------------------------
+		# Extract inputs
+		inputs_ps = tf.gather(self.inputs, indices = previous_states)
+		imputs_cs = tf.gather(self.inputs, indices = current_states)
+		# Calculate TD error and weights
+		qvalues_current_states = self.target_model.predict(imputs_cs)
+		max_qvalues_current_state = np.max(qvalues_current_states, axis = 1)
+		qvalues_previous_states = self.model.predict(inputs_ps)
+		errors = np.abs(rewards + self.gamma * max_qvalues_current_state - np.squeeze(qvalues_previous_states[np.arange(len(actions)), actions]))
+		self.priorities[indices] = errors + 0.000006
+		importance_sampling_weights = np.power(len(self.memory) * self.priorities[indices], -self.beta)
+		importance_sampling_weights =  importance_sampling_weights / importance_sampling_weights.max()
+		# ----------------------------------------------------------------------------
+		# Update the model
+		self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])
+		qvalues_previous_states[np.arange(len(actions)), actions] = rewards + (1 - dones) * self.gamma * max_qvalues_current_state
+		self.model.fit(inputs_ps, qvalues_previous_states, sample_weight = importance_sampling_weights, verbose = 1)
+		# ----------------------------------------------------------------------------
+
+	def _add_memory(self, previous_state, decided_action, reward_obtained, current_state):
+		"""
+		Add or replace the current transition in the memory buffer
+		"""
+		# ----------------------------------------------------------------------------
+		if reward_obtained == 1:
+			done = 1
 		else:
-			new_qvalue = reward + self.gamma * max_qvalues_current_state
-			print(f"{reward} + {self.gamma} * {max_qvalues_current_state} = {new_qvalue}")
-		# -------------------------c--------------------------------------------------
-		targeted_qvalues = self.model.predict(input_ps)
-		targeted_qvalues[0][action] = new_qvalue
+			done = 0
 		# ----------------------------------------------------------------------------
-		self.model.fit(input_ps, targeted_qvalues, verbose = 1)
+		if len(self.memory) < self.memory_size :
+			self.memory.append((previous_state, decided_action, reward_obtained, current_state, done))
+			self.priorities = np.append(self.priorities, max(self.priorities, default = 1))
+		else:
+			self.memory[self.pos] = (previous_state, decided_action, reward_obtained, current_state, done)
+			self.priorities[self.pos] = max(self.priorities, default = 1)
+		self.pos = (self.pos + 1) % self.memory_size
 		# ----------------------------------------------------------------------------
 
-	def update_memory(self, input_ps, decided_action, reward_obtained, input_cs):
-		# ----------------------------------------------------------------------------
-		self.replay_memory.append((input_ps, decided_action, reward_obtained, input_cs))
-		# ----------------------------------------------------------------------------
 
 	def run(self, action_count, cumulated_reward, reward_obtained, previous_state, decided_action, current_state, do_we_plan, new_goal): 
 		"""
@@ -263,28 +293,32 @@ class DQN:
 		self.dict_qvalues[(str(current_state),"actioncount")] = action_count
 		self.dict_qvalues[(str(previous_state),"visits")] += 1
 		# ---------------------------------------------------------------------------
-		# Update beta value
-		self.beta = min(self.beta * self.beta_growth, self.beta_max)
-		print(f"Beta = {self.beta}")
+		# The qvalues of the rewarded state have to be null. So set them to 0 the
+		# first time the rewarded state is met
+		if reward_obtained == 1 and cumulated_reward == 1:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
 		# ---------------------------------------------------------------------------
-		# Update the input vectors for the DQN
-		input_ps = np.array([0]*self.state_space)
-		input_ps[int(previous_state)] = 1
-		input_cs = np.array([0]*self.state_space)
-		input_cs[int(current_state)] = 1
+		# Same with the new rewarded state after the environmental change
+		if reward_obtained == 1 and new_goal == self.wait_new_goal == True:
+			self.rewarded_state = current_state
+			for a in range(0,self.action_space):
+				self.dict_qvalues[(self.rewarded_state,"qvals")] = [0.0]*self.action_space
+			self.wait_new_goal = False
+		# ---------------------------------------------------------------------------
+		# Memorize the transition and the priorities (except for the fake transition 
+		# final state -> start state)
+		if previous_state != self.rewarded_state:
+			self._add_memory(int(previous_state), decided_action, reward_obtained, int(current_state))
 		# ----------------------------------------------------------------------------
-		# Save the transition on memory for replaying
-		self.update_memory(input_ps, decided_action, reward_obtained, input_cs)
-		if len(self.replay_memory) > self.train_start and cumulated_reward > 0:
-			self.learn_whith_replay()
-		#if cumulated_reward > 0:
-			#self.learn(input_ps, decided_action, input_cs, reward_obtained)
-		# ----------------- ----------------------------------------------------------
-		self.target_update_counter += 1
-		if self.target_update_counter == self.update_target_every:
-			print("Update target model !")
-			self.target_model.set_weights(self.model.get_weights())
-			self.target_update_counter = 0
+		# Run the learning process and update eventually the target model
+		if len(self.memory) >= self.minibatch_size:
+			self._learn()
+			self._update_target_model()
+			# Update learning rate
+			self.learning_rate = max(self.learning_rate * self.learning_rate_decay, self.learning_rate_min)
+			print(f"Alpha = {self.learning_rate}")
 		# ----------------------------------------------------------------------------
 		# If the expert was choosen to plan, compute the news probabilities of actions
 		if do_we_plan:
@@ -292,7 +326,7 @@ class DQN:
 			old_time = datetime.datetime.now()
 			# ------------------------------------------------------------------------
 			# Run the process of inference
-			qvalues = self.infer(input_cs, current_state)
+			qvalues = self._infer(int(current_state))
 			# ------------------------------------------------------------------------
 			# Sum the duration of planification with a low pass filter
 			current_time = datetime.datetime.now()
@@ -302,8 +336,12 @@ class DQN:
 			set_duration(self.dict_duration, current_state, filtered_time)
 		else:
 			qvalues = self.dict_qvalues[(str(current_state),"qvals")]
-			# ------------------------------------------------------------------------
-		decided_action = self.decide(current_state, qvalues)
+		# ----------------------------------------------------------------------------
+		# Choose the next action to do from the current state using a soft-max policy
+		decided_action = self._decide(current_state, qvalues)
+		# ----------------------------------------------------------------------------
+		# Update epsilon value
+		self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 		# ----------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
@@ -321,7 +359,7 @@ class DQN:
 				# -------------------------------------------------------------------
 				prefixe = 'v%d_TBDQN_'%(VERSION)
 				self.summary_log = open(prefixe+'summary_log.dat', 'a')
-				self.summary_log.write(f"{self.alpha} {self.gamma} {self.beta} {cumulated_reward}\n")
+				self.summary_log.write(f"{self.alpha} {self.gamma} {self.epsilon} {cumulated_reward}\n")
 		# ---------------------------------------------------------------------------
 		return decided_action
 		# ---------------------------------------------------------------------------

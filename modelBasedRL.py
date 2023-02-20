@@ -45,9 +45,9 @@ class ModelBased:
 		self.duration = boundaries_exp["duration"]
 		self.window_size = boundaries_exp["window_size"]
 		self.epsilon = boundaries_exp["epsilon"]
-		self.alpha = parameters["alpha"]
 		self.gamma = parameters["gamma"]
 		self.beta = parameters["beta"]
+		self.alpha = parameters["alpha"]
 		self.log = log["log"]
 		self.summary = log["summary"]
 		self.not_learn = False
@@ -131,7 +131,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 
 
-	def decide(self, current_state, qvalues):
+	def _decide(self, current_state, qvalues):
 		"""
 		Choose the next action using soft-max policy
 		"""
@@ -158,7 +158,7 @@ class ModelBased:
 		set_filtered_prob(self.dict_actions_prob, current_state, filtered_actions_prob)
 		# ----------------------------------------------------------------------------
 		# The end of the soft-max function
-		decision, choosen_action = softmax_decision(actions_prob, actions)
+		_, choosen_action = softmax_decision(actions_prob, actions)
 		# ---------------------------------------------------------------------------
 		return choosen_action
 		# ----------------------------------------------------------------------------
@@ -207,7 +207,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 
 
-	def infer(self, current_state):
+	def _infer(self, current_state):
 		"""
 		In the MB expert, the process of inference consists to do planification using
 		models of the world.
@@ -277,7 +277,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 
 
-	def learn(self, previous_state, action, current_state, reward_obtained):
+	def _learn(self, previous_state, action, current_state, reward_obtained):
 		"""
 		Update the contents of the rewards and the transitions model
 		"""
@@ -410,7 +410,7 @@ class ModelBased:
 		# ----------------------------------------------------------------------------
 		if self.not_learn == False:
 		# Update the transition model and the reward model
-			self.learn(previous_state, decided_action, current_state, reward_obtained)
+			self._learn(previous_state, decided_action, current_state, reward_obtained)
 		# ----------------------------------------------------------------------------
 		# If the expert was choosen to plan, update all the qvalues using planification
 		if do_we_plan:
@@ -418,7 +418,7 @@ class ModelBased:
 			old_time = datetime.datetime.now()
 			# ------------------------------------------------------------------------
 			# Run the planification process
-			qvalues = self.infer(current_state)
+			qvalues = self._infer(current_state)
 			# ------------------------------------------------------------------------
 			# Sum the duration of planification with a low pass filter
 			current_time = datetime.datetime.now()
@@ -430,7 +430,7 @@ class ModelBased:
 			qvalues = self.dict_qvalues[(str(current_state),"qvals")]
 		# ----------------------------------------------------------------------------
 		# Choose the next action to do from the current state using soft-max policy.
-		decided_action = self.decide(current_state, qvalues)
+		decided_action = self._decide(current_state, qvalues)
 		# -------------------------------------------------------------------------
 		# Maj the history of the decisions
 		set_history_decision(self.dict_decision, current_state, decided_action, self.window_size)
